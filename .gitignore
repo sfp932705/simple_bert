@@ -1,0 +1,61 @@
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.manifest
+*.spec
+
+# Virtual environments
+.env
+.env.*
+.venv/
+venv/
+ENV/
+env/
+.pyenv/
+pip-wheel-metadata/
+
+# Jupyter checkpoints (keep notebooks tracked)
+.ipynb_checkpoints/
+
+# Tooling / IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs & runtime
+*.log
+logs/
+.cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data & large artifacts (adjust as needed)
+/data/
+*.csv
+*.parquet
+*.feather
+*.xlsx
+*.xls
+*.json
+*.pickle
+*.joblib
+Modelos/
+oferta/
+PYME_OUT_OFE_CLV_dummy.csv
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Ignore credentials (adjust if needed)
+*.env
+*.key
+*.pem

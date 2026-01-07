@@ -1,0 +1,26 @@
+name: Check Version
+
+on: [ pull_request ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check-version:
+    name: Ensure Version Bump
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure Version Bump
+        run: |
+          TAG=$(grep '^version = ' pyproject.toml | awk -F' = ' '{print "v" $2}' | tr -d '"')
+          if git show-ref --tags --verify --quiet "refs/tags/${TAG}"; then
+            echo "Tag ${TAG} exists"
+            exit 1
+          fi
