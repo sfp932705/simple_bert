@@ -28,5 +28,5 @@ class BaseTokenizer(ABC):
         pass
 
     @abstractmethod
-    def decode(self, text: str) -> list[int]:
+    def decode(self, ids: list[int]) -> str:
         pass

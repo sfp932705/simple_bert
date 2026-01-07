@@ -1,11 +1,10 @@
-import collections
+from collections import Counter
 
 from settings import TokenizerSettings
 from token_encoders.base import BaseTokenizer
 
 
 class BPETokenizer(BaseTokenizer):
-
     def __init__(self, settings: TokenizerSettings):
         super().__init__(settings)
         self.merges: list[tuple[str, str]] = []
@@ -13,20 +12,20 @@ class BPETokenizer(BaseTokenizer):
 
     def train(self, corpus: list[str]) -> None:
         processed_corpus = [s.replace(" ", self.delimiter) for s in corpus]
-        counts = collections.Counter(tuple(s) for s in processed_corpus)
+        counts: dict[tuple[str, ...], int] = Counter(tuple(s) for s in processed_corpus)
         alphabet = {char for word_tuple in counts for char in word_tuple}
         self._initialize_vocab(sorted(list(alphabet)))
 
         while len(self.vocab) < self.settings.vocab_size:
-            pair_counts: dict[tuple[str, str], int] = collections.Counter()
+            pair_counts: dict[tuple[str, str], int] = Counter()
             for word_tuple, freq in counts.items():
                 for i in range(len(word_tuple) - 1):
                     pair_counts[(word_tuple[i], word_tuple[i + 1])] += freq
             if not pair_counts:
                 break
 
-            best_pair: tuple[str, str] = max(pair_counts, key=pair_counts.get)
-            new_token: str = best_pair[0] + best_pair[1]
+            best_pair = max(pair_counts, key=pair_counts.get)  # type:ignore
+            new_token = best_pair[0] + best_pair[1]
             self.merges.append(best_pair)
 
             if new_token not in self.vocab:

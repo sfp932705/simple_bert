@@ -1,17 +1,16 @@
-import collections
+from collections import Counter
 
 from settings import TokenizerSettings
 from token_encoders.base import BaseTokenizer
 
 
 class WordPieceTokenizer(BaseTokenizer):
-
     def __init__(self, settings: TokenizerSettings):
         super().__init__(settings)
         self.delimiter = "##"
 
     def train(self, corpus: list[str]) -> None:
-        split_counts = collections.Counter(
+        split_counts: dict[tuple[str, ...], int] = Counter(
             tuple([word[0]] + [self.delimiter + char for char in word[1:]])
             for sentence in corpus
             for word in sentence.split()
@@ -21,8 +20,8 @@ class WordPieceTokenizer(BaseTokenizer):
 
         while len(self.vocab) < self.settings.vocab_size:
             scores: dict[tuple[str, str], float] = {}
-            pair_counts: dict[tuple[str, str], int] = collections.Counter()
-            char_counts: dict[str, int] = collections.Counter()
+            pair_counts: dict[tuple[str, str], int] = Counter()
+            char_counts: dict[str, int] = Counter()
 
             for word_tuple, freq in split_counts.items():
                 for i in range(len(word_tuple) - 1):
@@ -35,8 +34,8 @@ class WordPieceTokenizer(BaseTokenizer):
 
             if not scores:
                 break
-            best_pair: tuple[str, str] = max(scores, key=scores.get)
-            new_token: str = best_pair[0] + best_pair[1].replace(self.delimiter, "")
+            best_pair = max(scores, key=scores.get)  # type:ignore
+            new_token = best_pair[0] + best_pair[1].replace(self.delimiter, "")
 
             if new_token not in self.vocab:
                 self.vocab[new_token] = len(self.vocab)
