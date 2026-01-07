@@ -1,0 +1,27 @@
+name: Tagging
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  tag:
+    name: Assign Tag
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.merged || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: "${{ secrets.REPO_PAT_RW  }}"
+
+      - name: Tag
+        run: |
+          TAG=$(grep '^version = ' pyproject.toml | awk -F' = ' '{print "v" $2}' | tr -d '"')
+          git tag $TAG
+          git push --tags
