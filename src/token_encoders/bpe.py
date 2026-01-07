@@ -1,4 +1,5 @@
 from collections import Counter
+from pathlib import Path
 
 from settings import TokenizerSettings
 from token_encoders.base import BaseTokenizer
@@ -74,3 +75,22 @@ class BPETokenizer(BaseTokenizer):
     def decode(self, ids: list[int]) -> str:
         tokens = [self.inverse_vocab.get(i, "[UNK]") for i in ids]
         return "".join(tokens).replace(self.delimiter, " ").strip()
+
+    def save(self, directory: Path) -> None:
+        super().save(directory)
+        merge_content = "\n".join([f"{p[0]} {p[1]}" for p in self.merges])
+        (directory / "merges.txt").write_text(merge_content, encoding="utf-8")
+
+    def load(self, directory: Path) -> None:
+        super().load(directory)
+        merge_path = directory / "merges.txt"
+        if not merge_path.exists():
+            raise FileNotFoundError(f"No merges.txt found in {directory}")
+        self.merges = []
+        lines = merge_path.read_text(encoding="utf-8").splitlines()
+        for line in lines:
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) == 2:
+                self.merges.append((parts[0], parts[1]))

@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pytest
+
 from token_encoders.bpe import BPETokenizer
 
 
@@ -26,3 +30,47 @@ def test_bpe_encoding_decoding(trained_byte_pair_tokenizer: BPETokenizer):
 def test_bpe_unknown_token(trained_byte_pair_tokenizer: BPETokenizer):
     encoded = trained_byte_pair_tokenizer.encode("§")
     assert trained_byte_pair_tokenizer.vocab["[UNK]"] in encoded
+
+
+def test_bpe_save_load_consistency(
+    trained_byte_pair_tokenizer: BPETokenizer, tmp_path: Path
+):
+    save_dir = tmp_path / "bpe_model"
+    trained_byte_pair_tokenizer.save(save_dir)
+    assert (save_dir / "vocab.txt").exists()
+    assert (save_dir / "merges.txt").exists()
+    new_tokenizer = BPETokenizer(trained_byte_pair_tokenizer.settings)
+    new_tokenizer.load(save_dir)
+    assert sorted(new_tokenizer.vocab) == sorted(trained_byte_pair_tokenizer.vocab)
+    assert new_tokenizer.merges == trained_byte_pair_tokenizer.merges
+    test_text = "the man bought milk"
+    assert new_tokenizer.encode(test_text) == trained_byte_pair_tokenizer.encode(
+        test_text
+    )
+
+
+def test_load_fails(trained_byte_pair_tokenizer: BPETokenizer, tmp_path: Path):
+    with pytest.raises(FileNotFoundError):
+        trained_byte_pair_tokenizer.load(tmp_path)
+    trained_byte_pair_tokenizer.save(tmp_path)
+    (tmp_path / "merges.txt").unlink()
+    with pytest.raises(FileNotFoundError):
+        trained_byte_pair_tokenizer.load(tmp_path)
+
+
+def test_bpe_vocab_sorting_on_disk(
+    trained_byte_pair_tokenizer: BPETokenizer, tmp_path: Path
+):
+    save_dir = tmp_path / "bpe_check"
+    trained_byte_pair_tokenizer.save(save_dir)
+    vocab_lines = (save_dir / "vocab.txt").read_text(encoding="utf-8").splitlines()
+    for line_idx, token in enumerate(vocab_lines):
+        assert trained_byte_pair_tokenizer.vocab[token] == line_idx
+
+
+def test_bpe_merges_format(trained_byte_pair_tokenizer: BPETokenizer, tmp_path):
+    save_dir = tmp_path / "bpe_merges"
+    trained_byte_pair_tokenizer.save(save_dir)
+    merges_lines = (save_dir / "merges.txt").read_text(encoding="utf-8").splitlines()
+    for i, merge in enumerate(trained_byte_pair_tokenizer.merges):
+        assert merges_lines[i] == f"{merge[0]} {merge[1]}"
