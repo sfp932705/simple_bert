@@ -12,11 +12,17 @@ class BPETokenizer(BaseTokenizer):
         self.delimiter = "Ġ"
 
     def train(self, corpus: list[str]) -> None:
-        processed_corpus = [s.replace(" ", self.delimiter) for s in corpus]
-        counts: dict[tuple[str, ...], int] = Counter(tuple(s) for s in processed_corpus)
+        counts: Counter[tuple[str, ...]] = Counter()
+        for sentence in corpus:
+            words = sentence.split()
+            if not words:
+                continue
+            counts[tuple(words[0])] += 1
+            for w in words[1:]:
+                counts[tuple(self.delimiter + w)] += 1
+
         alphabet = {char for word_tuple in counts for char in word_tuple}
         self._initialize_vocab(sorted(list(alphabet)))
-
         while len(self.vocab) < self.settings.vocab_size:
             pair_counts: dict[tuple[str, str], int] = Counter()
             for word_tuple, freq in counts.items():
@@ -24,7 +30,6 @@ class BPETokenizer(BaseTokenizer):
                     pair_counts[(word_tuple[i], word_tuple[i + 1])] += freq
             if not pair_counts:
                 break
-
             best_pair = max(pair_counts, key=pair_counts.get)  # type:ignore
             new_token = best_pair[0] + best_pair[1]
             self.merges.append(best_pair)
@@ -32,9 +37,11 @@ class BPETokenizer(BaseTokenizer):
             if new_token not in self.vocab:
                 self.vocab[new_token] = len(self.vocab)
                 self.inverse_vocab[len(self.vocab) - 1] = new_token
-            new_counts = {}
+
+            new_counts: Counter = Counter()
             for word_tuple, freq in counts.items():
-                new_word, i = [], 0
+                new_word = []
+                i = 0
                 while i < len(word_tuple):
                     if (
                         i < len(word_tuple) - 1
@@ -49,11 +56,15 @@ class BPETokenizer(BaseTokenizer):
             counts = new_counts
 
     def encode(self, text: str) -> list[int]:
-        words = text.split(" ")
+        if not text:
+            return []
+        words = text.split()
+        if not words:
+            return []
+
         encoded_ids = []
-        for i, word in enumerate(words):
-            word_str = self.delimiter + word if i > 0 else word
-            symbols = list(word_str)
+        word_list = [list(words[0])] + [list(self.delimiter + w) for w in words[1:]]
+        for symbols in word_list:
             for pair in self.merges:
                 if pair[0] not in symbols:
                     continue
