@@ -1,22 +1,22 @@
 import collections
 
+from settings import TokenizerSettings
 from token_encoders.base import BaseTokenizer
 
 
 class WordPieceTokenizer(BaseTokenizer):
-    def train(self, corpus: list[str]) -> None:
-        counts: dict[str, int] = collections.Counter()
-        for sentence in corpus:
-            for word in sentence.split():
-                counts[word] += 1
-        split_counts: dict[tuple[str, ...], int] = {
-            tuple([w[0]] + ["##" + c for c in w[1:]]): freq
-            for w, freq in counts.items()
-        }
 
-        alphabet: set[str] = set()
-        for t in split_counts:
-            alphabet.update(t)
+    def __init__(self, settings: TokenizerSettings):
+        super().__init__(settings)
+        self.delimiter = "##"
+
+    def train(self, corpus: list[str]) -> None:
+        split_counts = collections.Counter(
+            tuple([word[0]] + [self.delimiter + char for char in word[1:]])
+            for sentence in corpus
+            for word in sentence.split()
+        )
+        alphabet = {char for word_tuple in split_counts for char in word_tuple}
         self._initialize_vocab(sorted(list(alphabet)))
 
         while len(self.vocab) < self.settings.vocab_size:
@@ -36,7 +36,7 @@ class WordPieceTokenizer(BaseTokenizer):
             if not scores:
                 break
             best_pair: tuple[str, str] = max(scores, key=scores.get)
-            new_token: str = best_pair[0] + best_pair[1].replace("##", "")
+            new_token: str = best_pair[0] + best_pair[1].replace(self.delimiter, "")
 
             if new_token not in self.vocab:
                 self.vocab[new_token] = len(self.vocab)
@@ -68,7 +68,7 @@ class WordPieceTokenizer(BaseTokenizer):
                 while start < end:
                     substr = word[start:end]
                     if start > 0:
-                        substr = "##" + substr
+                        substr = self.delimiter + substr
                     if substr in self.vocab:
                         cur_substr = substr
                         break
@@ -82,4 +82,4 @@ class WordPieceTokenizer(BaseTokenizer):
 
     def decode(self, ids: list[int]) -> str:
         tokens = [self.inverse_vocab.get(i, "[UNK]") for i in ids]
-        return " ".join(tokens).replace(" ##", "")
+        return " ".join(tokens).replace(f" {self.delimiter}", "")

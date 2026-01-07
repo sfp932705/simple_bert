@@ -12,6 +12,8 @@ class BaseTokenizer(ABC):
     def _initialize_vocab(self, base_alphabet: list[str]) -> None:
         for idx, token in enumerate(self.settings.special_tokens):
             self.vocab[token] = idx
+        for i in range(self.settings.unused_tokens):
+            self.vocab[f"[unused{i}]"] = len(self.vocab)
         for char in base_alphabet:
             if char not in self.vocab:
                 self.vocab[char] = len(self.vocab)

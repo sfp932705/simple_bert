@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class TokenizerSettings(BaseSettings):
     vocab_size: int = 15000
     special_tokens: list[str] = ["[PAD]", "[MASK]", "[CLS]", "[SEP]", "[UNK]"]
+    unused_tokens: int = 100
 
 
 class Settings(BaseSettings):
