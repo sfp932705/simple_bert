@@ -5,7 +5,7 @@ readme = "README.md"
 authors = [{ name = "Sergio Frayle Perez", email = "sfp932705@gmail.com" }]
 version = "0.0.1"
 requires-python = ">=3.13"
-dependencies = ["torch==2.9.1"]
+dependencies = ["torch==2.9.1", "pydantic-settings==2.12.0"]
 
 [tool.black]
 line-length = 88
@@ -25,6 +25,21 @@ explicit_package_bases = true
 addopts = "-p no:cacheprovider --cov-report term-missing"
 env_files = ".env.test"
 testpaths = ["tests"]
+
+[tool.coverage.report]
+skip_empty = true
+skip_covered = true
+omit = ["shared/main.py"]
+exclude_also = [
+    "def __repr__",
+    "@(abc\\.)?abstractmethod",
+    "__name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "class .*\bException\\):",
+    "class .*\bError\\):",
+    "class .*\\(abc\\.ABC\\):",
+]
+
 
 [[tool.mypy.overrides]]
 module = []
