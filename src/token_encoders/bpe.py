@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from settings import TokenizerSettings
@@ -10,50 +10,97 @@ class BPETokenizer(BaseTokenizer):
         super().__init__(settings)
         self.merges: list[tuple[str, str]] = []
         self.delimiter = "Ġ"
+        self.vocab_list: list[list[str]] = []
+        self.vocab_counts: list[int] = []
 
     def train(self, corpus: list[str]) -> None:
-        counts: Counter[tuple[str, ...]] = Counter()
-        for sentence in corpus:
-            words = sentence.split()
+        word_ctr: Counter[tuple[str, ...]] = Counter()
+        for text in corpus:
+            if not text:
+                continue
+            words = text.split()
             if not words:
                 continue
-            counts[tuple(words[0])] += 1
+            word_ctr[tuple(words[0])] += 1
             for w in words[1:]:
-                counts[tuple(self.delimiter + w)] += 1
+                word_ctr[tuple(self.delimiter + w)] += 1
 
-        alphabet = {char for word_tuple in counts for char in word_tuple}
+        self.vocab_list = [list(w) for w in word_ctr.keys()]
+        self.vocab_counts = list(word_ctr.values())
+
+        stats: Counter = Counter()
+        inverted_index = defaultdict(set)
+
+        for idx, word in enumerate(self.vocab_list):
+            freq = self.vocab_counts[idx]
+            for i in range(len(word) - 1):
+                pair = (word[i], word[i + 1])
+                stats[pair] += freq
+                inverted_index[pair].add(idx)
+
+        alphabet = {char for word in self.vocab_list for char in word}
         self._initialize_vocab(sorted(list(alphabet)))
+
         while len(self.vocab) < self.settings.vocab_size:
-            pair_counts: dict[tuple[str, str], int] = Counter()
-            for word_tuple, freq in counts.items():
-                for i in range(len(word_tuple) - 1):
-                    pair_counts[(word_tuple[i], word_tuple[i + 1])] += freq
-            if not pair_counts:
+            if not stats:
                 break
-            best_pair = max(pair_counts, key=pair_counts.get)  # type:ignore
-            new_token = best_pair[0] + best_pair[1]
+
+            best_pair = max(stats, key=stats.get)  # type: ignore
+            if stats[best_pair] < 1:
+                break
+
+            token_a, token_b = best_pair
+            new_token = token_a + token_b
             self.merges.append(best_pair)
 
             if new_token not in self.vocab:
                 self.vocab[new_token] = len(self.vocab)
                 self.inverse_vocab[len(self.vocab) - 1] = new_token
+            indices_to_update = list(inverted_index[best_pair])
 
-            new_counts: Counter = Counter()
-            for word_tuple, freq in counts.items():
-                new_word = []
+            for idx in indices_to_update:
+                word = self.vocab_list[idx]
+                freq = self.vocab_counts[idx]
+                new_word: list = []
                 i = 0
-                while i < len(word_tuple):
+                while i < len(word):
                     if (
-                        i < len(word_tuple) - 1
-                        and (word_tuple[i], word_tuple[i + 1]) == best_pair
+                        i < len(word) - 1
+                        and word[i] == token_a
+                        and word[i + 1] == token_b
                     ):
+                        merge_right_side = (
+                            i + 3 < len(word)
+                            and word[i + 2] == token_a
+                            and word[i + 3] == token_b
+                        )
+
+                        if i > 0:
+                            prev_token = new_word[-1]
+                            prev_pair = (prev_token, token_a)
+                            stats[prev_pair] -= freq
+                            new_prev_pair = (prev_token, new_token)
+                            stats[new_prev_pair] += freq
+                            inverted_index[new_prev_pair].add(idx)
+                        if not merge_right_side and i < len(word) - 2:
+                            next_token = word[i + 2]
+                            next_pair = (token_b, next_token)
+                            stats[next_pair] -= freq
+
+                            new_next_pair = (new_token, next_token)
+                            stats[new_next_pair] += freq
+                            inverted_index[new_next_pair].add(idx)
+
                         new_word.append(new_token)
                         i += 2
                     else:
-                        new_word.append(word_tuple[i])
+                        new_word.append(word[i])
                         i += 1
-                new_counts[tuple(new_word)] = freq
-            counts = new_counts
+
+                self.vocab_list[idx] = new_word
+
+            del stats[best_pair]
+            del inverted_index[best_pair]
 
     def encode(self, text: str) -> list[int]:
         if not text:
