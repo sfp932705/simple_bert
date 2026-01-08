@@ -1,4 +1,4 @@
-export PYTHONPATH=$(PWD)/src
+export PYTHONPATH=$(PWD)/src:$(PWD)/rust
 
 all: lint test
 

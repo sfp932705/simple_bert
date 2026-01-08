@@ -1,0 +1,11 @@
+[package]
+name = "simple_bert_backend"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.27.2", features = ["extension-module"] }
