@@ -12,6 +12,7 @@ class BPETokenizer(BaseTokenizer):
         self.delimiter = "Ġ"
         self.vocab_list: list[list[str]] = []
         self.vocab_counts: list[int] = []
+        self.unk_token = "[UNK]"
 
     def train(self, corpus: list[str]) -> None:
         word_ctr: Counter[tuple[str, ...]] = Counter()
@@ -126,12 +127,12 @@ class BPETokenizer(BaseTokenizer):
                         j += 1
                 symbols = new_symbols
             encoded_ids.extend(
-                [self.vocab.get(s, self.vocab["[UNK]"]) for s in symbols]
+                [self.vocab.get(s, self.vocab[self.unk_token]) for s in symbols]
             )
         return encoded_ids
 
     def decode(self, ids: list[int]) -> str:
-        tokens = [self.inverse_vocab.get(i, "[UNK]") for i in ids]
+        tokens = [self.inverse_vocab.get(i, self.unk_token) for i in ids]
         return "".join(tokens).replace(self.delimiter, " ").strip()
 
     def save(self, directory: Path) -> None:
