@@ -1,16 +1,37 @@
 import unicodedata
-from collections import Counter, defaultdict
+from collections import Counter
+from pathlib import Path
 
 from settings import TokenizerSettings
-from token_encoders.base import BaseTokenizer
+from token_encoders.bpe import BPETokenizer
 
 
-class WordPieceTokenizer(BaseTokenizer):
+class TrieNode:
+    def __init__(self):
+        self.children: dict[str, TrieNode] = {}
+        self.token_id: int | None = None
+        self.score: float = 0.0
+        self.end_word: bool = False
+
+
+class WordPieceTokenizer(BPETokenizer):
     def __init__(self, settings: TokenizerSettings):
         super().__init__(settings)
         self.delimiter = "##"
-        self.unk_token = "[UNK]"
         self.do_lower_case = True
+        self.trie_root = TrieNode()
+        self.min_score = -1e10  # Fallback score
+
+    def _build_index(self) -> None:
+        self.trie_root = TrieNode()
+        for token, token_id in self.vocab.items():
+            node = self.trie_root
+            for char in token:
+                if char not in node.children:
+                    node.children[char] = TrieNode()
+                node = node.children[char]
+            node.token_id = token_id
+            node.end_word = True
 
     def _is_punctuation(self, char: str) -> bool:
         cp = ord(char)
@@ -31,6 +52,21 @@ class WordPieceTokenizer(BaseTokenizer):
             or (cp >= 0x3400 and cp <= 0x4DBF)
             or (cp >= 0x20000 and cp <= 0x2A6DF)
         )
+
+    def _prepare_corpus_counts(self, corpus: list[str]) -> Counter[str]:
+        word_freqs = Counter()
+        for text in corpus:
+            words = self.pre_tokenize(text)
+            word_freqs.update(words)
+        return word_freqs
+
+    def _token_to_chars(self, word: str) -> list[str]:
+        return [
+            char if i == 0 else f"{self.delimiter}{char}" for i, char in enumerate(word)
+        ]
+
+    def _merge_strings(self, token_a: str, token_b: str) -> str:
+        return token_a + token_b.replace(self.delimiter, "", 1)
 
     def pre_tokenize(self, text: str) -> list[str]:
         if self.do_lower_case:
@@ -56,137 +92,71 @@ class WordPieceTokenizer(BaseTokenizer):
         return split_tokens
 
     def train(self, corpus: list[str]) -> None:
-        print(f"Step 1: Pre-tokenizing (Lower case: {self.do_lower_case})...")
-        word_freqs = Counter()
-        for text in corpus:
-            words = self.pre_tokenize(text)
-            word_freqs.update(words)
+        super().train(corpus)
+        self._build_index()
 
-        unique_words = list(word_freqs.keys())
-        word_splits = []
-
-        char_counts = Counter()
-        inner_chars = set()
-
-        for word, freq in word_freqs.items():
-            for i, char in enumerate(word):
-                char_counts[char] += freq
-                if i > 0:
-                    inner_chars.add(char)
-        all_chars = set(char_counts.keys())
-
-        initial_alphabet = []
-        for char in sorted(list(all_chars)):
-            initial_alphabet.append(char)
-            if char in inner_chars:
-                initial_alphabet.append(f"{self.delimiter}{char}")
-
-        self._initialize_vocab(initial_alphabet)
-        next_id = len(self.vocab)
-        pair_counts = defaultdict(int)
-        where_pair = defaultdict(set)
-
-        for idx, word in enumerate(unique_words):
-            freq = word_freqs[word]
-            tokens = [
-                char if i == 0 else f"{self.delimiter}{char}"
-                for i, char in enumerate(word)
-            ]
-            word_splits.append(tokens)
-
-            for i in range(len(tokens) - 1):
-                pair = (tokens[i], tokens[i + 1])
-                pair_counts[pair] += freq
-                where_pair[pair].add(idx)
-
-        while len(self.vocab) < self.settings.vocab_size:
-            best_pair = None
-            max_score = -1
-            current_pairs = list(pair_counts.keys())
-            for pair in current_pairs:
-                freq = pair_counts[pair]
-
-                if freq > max_score:
-                    max_score = freq
-                    best_pair = pair
-                elif freq == max_score:
-                    if best_pair is None or pair < best_pair:
-                        best_pair = pair
-
-            if best_pair is None:
-                break
-
-            p1, p2 = best_pair
-            new_token = p1 + p2.replace(self.delimiter, "", 1)
-
-            self.vocab[new_token] = next_id
-            self.inverse_vocab[next_id] = new_token
-            next_id += 1
-
-            indices = where_pair[best_pair]
-            for word_idx in indices:
-                tokens = word_splits[word_idx]
-                if len(tokens) < 2:
-                    continue
-
-                freq = word_freqs[unique_words[word_idx]]
-                for i in range(len(tokens) - 1):
-                    pair_counts[(tokens[i], tokens[i + 1])] -= freq
-
-                new_tokens = []
-                i = 0
-                while i < len(tokens):
-                    if i < len(tokens) - 1 and tokens[i] == p1 and tokens[i + 1] == p2:
-                        new_tokens.append(new_token)
-                        i += 2
-                    else:
-                        new_tokens.append(tokens[i])
-                        i += 1
-                word_splits[word_idx] = new_tokens
-
-                for i in range(len(new_tokens) - 1):
-                    pair = (new_tokens[i], new_tokens[i + 1])
-                    pair_counts[pair] += freq
-                    where_pair[pair].add(word_idx)
-
-            del pair_counts[best_pair]
-            del where_pair[best_pair]
+    def load(self, directory: Path) -> None:
+        super().load(directory)
+        self._build_index()
 
     def encode(self, text: str) -> list[int]:
+        if not self.trie_root.children:
+            self._build_index()
+
         words = self.pre_tokenize(text)
         output_ids = []
-        max_len = 100
+        unk_id = self.vocab.get(self.unk_token)
+        continuing_root = self.trie_root
+        if self.delimiter[0] in continuing_root.children:
+            for char in self.delimiter:
+                if char in continuing_root.children:
+                    continuing_root = continuing_root.children[char]
+                else:
+                    continuing_root = None
+                    break
 
         for word in words:
             chars = list(word)
-            start = 0
-            sub_tokens = []
+            i = 0
+            n = len(chars)
             is_bad = False
+            word_ids = []
 
-            while start < len(chars):
-                end = min(len(chars), start + max_len)
-                cur_substr = None
-                while start < end:
-                    substr = "".join(chars[start:end])
-                    if start > 0:
-                        substr = self.delimiter + substr
-
-                    if substr in self.vocab:
-                        cur_substr = substr
+            while i < n:
+                if i == 0:
+                    node = self.trie_root
+                else:
+                    node = continuing_root
+                    if node is None:
+                        is_bad = True
                         break
-                    end -= 1
 
-                if cur_substr is None:
+                j = i
+                last_token_id = None
+                last_match_end = -1
+
+                while j < n:
+                    char = chars[j]
+                    if char in node.children:
+                        node = node.children[char]
+                        if node.token_id is not None:
+                            last_token_id = node.token_id
+                            last_match_end = j
+                        j += 1
+                    else:
+                        break
+
+                if last_token_id is not None:
+                    word_ids.append(last_token_id)
+                    i = last_match_end + 1
+                else:
                     is_bad = True
                     break
 
-                sub_tokens.append(cur_substr)
-                start = end
-
             if is_bad:
-                output_ids.append(self.vocab[self.unk_token])
+                output_ids.append(unk_id)
             else:
-                output_ids.extend([self.vocab[t] for t in sub_tokens])
+                output_ids.extend(word_ids)
         return output_ids
 
     def decode(self, ids: list[int]) -> str:

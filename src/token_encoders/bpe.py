@@ -9,38 +9,51 @@ class BPETokenizer(BaseTokenizer):
     def __init__(self, settings: TokenizerSettings):
         super().__init__(settings)
         self.merges: list[tuple[str, str]] = []
-        self.delimiter = "Ġ"
         self.vocab_list: list[list[str]] = []
         self.vocab_counts: list[int] = []
+        self.delimiter = "Ġ"
         self.unk_token = "[UNK]"
 
-    def train(self, corpus: list[str]) -> None:
-        word_ctr: Counter[tuple[str, ...]] = Counter()
+    def _prepare_corpus_counts(self, corpus: list[str]) -> Counter[str]:
+        word_ctr = Counter()
         for text in corpus:
             if not text:
                 continue
             words = text.split()
             if not words:
                 continue
-            word_ctr[tuple(words[0])] += 1
+            word_ctr[words[0]] += 1
             for w in words[1:]:
-                word_ctr[tuple(self.delimiter + w)] += 1
+                word_ctr[self.delimiter + w] += 1
+        return word_ctr
 
-        self.vocab_list = [list(w) for w in word_ctr.keys()]
-        self.vocab_counts = list(word_ctr.values())
+    def _token_to_chars(self, word: str) -> list[str]:
+        return list(word)
 
+    def _merge_strings(self, token_a: str, token_b: str) -> str:
+        return token_a + token_b
+
+    def train(self, corpus: list[str]) -> None:
+        word_counts = self._prepare_corpus_counts(corpus)
+        self.vocab_list = []
+        self.vocab_counts = []
+        for word, freq in word_counts.items():
+            self.vocab_list.append(self._token_to_chars(word))
+            self.vocab_counts.append(freq)
+
+        alphabet = {char for word in self.vocab_list for char in word}
+        self._initialize_vocab(sorted(list(alphabet)))
+        self._run_merge_loop()
+
+    def _run_merge_loop(self) -> None:
         stats: Counter = Counter()
         inverted_index = defaultdict(set)
-
         for idx, word in enumerate(self.vocab_list):
             freq = self.vocab_counts[idx]
             for i in range(len(word) - 1):
                 pair = (word[i], word[i + 1])
                 stats[pair] += freq
                 inverted_index[pair].add(idx)
-
-        alphabet = {char for word in self.vocab_list for char in word}
-        self._initialize_vocab(sorted(list(alphabet)))
 
         while len(self.vocab) < self.settings.vocab_size:
             if not stats:
@@ -51,7 +64,7 @@ class BPETokenizer(BaseTokenizer):
                 break
 
             token_a, token_b = best_pair
-            new_token = token_a + token_b
+            new_token = self._merge_strings(token_a, token_b)
             self.merges.append(best_pair)
 
             if new_token not in self.vocab:
@@ -70,23 +83,19 @@ class BPETokenizer(BaseTokenizer):
                         and word[i] == token_a
                         and word[i + 1] == token_b
                     ):
-                        merge_right_side = (
-                            i + 3 < len(word)
-                            and word[i + 2] == token_a
-                            and word[i + 3] == token_b
-                        )
-
                         if i > 0:
                             prev_token = new_word[-1]
-                            prev_pair = (prev_token, token_a)
-                            stats[prev_pair] -= freq
+                            stats[(prev_token, token_a)] -= freq
+                            inverted_index[(prev_token, token_a)].discard(idx)
+
                             new_prev_pair = (prev_token, new_token)
                             stats[new_prev_pair] += freq
                             inverted_index[new_prev_pair].add(idx)
-                        if not merge_right_side and i < len(word) - 2:
+
+                        if i < len(word) - 2:
                             next_token = word[i + 2]
-                            next_pair = (token_b, next_token)
-                            stats[next_pair] -= freq
+                            stats[(token_b, next_token)] -= freq
+                            inverted_index[(token_b, next_token)].discard(idx)
 
                             new_next_pair = (new_token, next_token)
                             stats[new_next_pair] += freq
