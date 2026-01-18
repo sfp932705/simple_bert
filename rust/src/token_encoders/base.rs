@@ -1,8 +1,56 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum TokenizerModel {
+    BPE,
+    WordPiece,
+}
+
+impl TokenizerModel {
+    pub fn token_to_chars(&self, word: &str, delimiter: &str) -> Vec<String> {
+        match self {
+            TokenizerModel::BPE => {
+                let s = format!("{}{}", delimiter, word);
+                s.chars().map(|c| c.to_string()).collect()
+            }
+            TokenizerModel::WordPiece => word
+                .chars()
+                .enumerate()
+                .map(|(i, c)| {
+                    if i == 0 {
+                        c.to_string()
+                    } else {
+                        format!("{}{}", delimiter, c)
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    pub fn merge_strings(&self, part_a: &str, part_b: &str, delimiter: &str) -> String {
+        match self {
+            TokenizerModel::BPE => {
+                format!("{}{}", part_a, part_b)
+            }
+            TokenizerModel::WordPiece => {
+                let clean_b = if part_b.starts_with(delimiter) {
+                    &part_b[delimiter.len()..]
+                } else {
+                    part_b
+                };
+                format!("{}{}", part_a, clean_b)
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Base Tokenizer Struct
+// -----------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct BaseTokenizer {
-    pub vocab: HashMap<String, u32>,
-    pub inverse_vocab: HashMap<u32, String>,
+    pub vocab: FxHashMap<String, u32>,
+    pub inverse_vocab: FxHashMap<u32, String>,
     pub vocab_size: usize,
     pub special_tokens: Vec<String>,
 }
@@ -14,14 +62,14 @@ impl BaseTokenizer {
         }
 
         BaseTokenizer {
-            vocab: HashMap::new(),
-            inverse_vocab: HashMap::new(),
+            vocab: FxHashMap::default(),
+            inverse_vocab: FxHashMap::default(),
             vocab_size,
-            special_tokens, // This now contains the FULL list
+            special_tokens,
         }
     }
 
-    pub fn initialize_vocab(&mut self, sorted_alphabet: Vec<char>) {
+    pub fn initialize_vocab(&mut self, sorted_alphabet: Vec<String>) {
         self.vocab.clear();
         self.inverse_vocab.clear();
         for (i, token) in self.special_tokens.iter().enumerate() {
@@ -29,15 +77,14 @@ impl BaseTokenizer {
             self.inverse_vocab.insert(i as u32, token.clone());
         }
 
-        for c in sorted_alphabet {
-            let s = c.to_string();
-            if !self.vocab.contains_key(&s) {
+        for token in sorted_alphabet {
+            if !self.vocab.contains_key(&token) {
                 if self.vocab.len() >= self.vocab_size {
                     break;
                 }
                 let idx = self.vocab.len() as u32;
-                self.vocab.insert(s.clone(), idx);
-                self.inverse_vocab.insert(idx, s);
+                self.vocab.insert(token.clone(), idx);
+                self.inverse_vocab.insert(idx, token);
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::token_encoders::base::BaseTokenizer;
+use crate::token_encoders::base::{BaseTokenizer, TokenizerModel};
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -47,9 +47,10 @@ impl PartialOrd for MergePair {
 
 #[pyclass]
 pub struct RustBPETokenizer {
-    base: BaseTokenizer,
+    pub base: BaseTokenizer,
     merges: Vec<(String, String)>,
     delimiter: String,
+    model: TokenizerModel,
 }
 
 impl RustBPETokenizer {
@@ -98,20 +99,24 @@ impl RustBPETokenizer {
         special_tokens: Vec<String>,
         unused_tokens: usize,
         delimiter: String,
+        wordpiece_mode: Option<bool>,
     ) -> Self {
+        let model = if wordpiece_mode.unwrap_or(false) {
+            TokenizerModel::WordPiece
+        } else {
+            TokenizerModel::BPE
+        };
+
         RustBPETokenizer {
             base: BaseTokenizer::new(vocab_size, special_tokens, unused_tokens),
             merges: Vec::new(),
             delimiter,
+            model,
         }
     }
 
     pub fn get_vocab(&self) -> FxHashMap<String, u32> {
-        self.base
-            .vocab
-            .iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect()
+        self.base.vocab.clone()
     }
 
     pub fn get_merges(&self) -> Vec<(String, String)> {
@@ -137,30 +142,25 @@ impl RustBPETokenizer {
                 m1
             });
 
-        let string_counts: FxHashMap<String, u32> = intermediate_counts
-            .into_iter()
-            .map(|(word, count)| {
-                let s = format!("{}{}", self.delimiter, word);
-                (s, count)
-            })
-            .collect();
+        let mut string_counts: FxHashMap<String, u32> = FxHashMap::default();
+        let mut alphabet: FxHashSet<String> = FxHashSet::default();
 
-        let mut alphabet: FxHashSet<char> = FxHashSet::default();
-        for key in string_counts.keys() {
-            for c in key.chars() {
-                alphabet.insert(c);
+        for (word, count) in intermediate_counts {
+            let chars = self.model.token_to_chars(word, &self.delimiter);
+            for c in &chars {
+                alphabet.insert(c.clone());
             }
+            string_counts.insert(word.to_string(), count);
         }
-        let mut sorted_alphabet: Vec<char> = alphabet.into_iter().collect();
+
+        let mut sorted_alphabet: Vec<String> = alphabet.into_iter().collect();
         sorted_alphabet.sort();
         self.base.initialize_vocab(sorted_alphabet);
 
         let mut word_list: Vec<(Vec<u32>, u32)> = Vec::with_capacity(string_counts.len());
-        for (s, freq) in string_counts {
-            let ids: Vec<u32> = s
-                .chars()
-                .map(|c| self.base.get_id(&c.to_string()))
-                .collect();
+        for (word, freq) in string_counts {
+            let chars = self.model.token_to_chars(&word, &self.delimiter);
+            let ids: Vec<u32> = chars.iter().map(|s| self.base.get_id(s)).collect();
             word_list.push((ids, freq));
         }
 
@@ -212,7 +212,7 @@ impl RustBPETokenizer {
 
             let part_a = self.base.inverse_vocab.get(&left_id).unwrap().clone();
             let part_b = self.base.inverse_vocab.get(&right_id).unwrap().clone();
-            let new_token_str = format!("{}{}", part_a, part_b);
+            let new_token_str = self.model.merge_strings(&part_a, &part_b, &self.delimiter);
 
             self.merges.push((part_a, part_b));
             self.base.add_token(new_token_str);
@@ -314,26 +314,19 @@ impl RustBPETokenizer {
             return Vec::new();
         }
         let mut encoded_ids = Vec::new();
-        let mut word_list: Vec<Vec<u32>> = Vec::new();
-        word_list.push(
-            words[0]
-                .chars()
-                .map(|c| self.base.get_id(&c.to_string()))
-                .collect(),
-        );
-        for w in &words[1..] {
-            let prefixed = format!("{}{}", self.delimiter, w);
-            word_list.push(
-                prefixed
-                    .chars()
-                    .map(|c| self.base.get_id(&c.to_string()))
-                    .collect(),
-            );
-        }
+
+        let mut word_list: Vec<Vec<u32>> = words
+            .iter()
+            .map(|w| {
+                let chars = self.model.token_to_chars(w, &self.delimiter);
+                chars.iter().map(|c| self.base.get_id(c)).collect()
+            })
+            .collect();
+
         for (p_left, p_right) in &self.merges {
             let left_id = self.base.get_id(p_left);
             let right_id = self.base.get_id(p_right);
-            let new_token_str = format!("{}{}", p_left, p_right);
+            let new_token_str = self.model.merge_strings(p_left, p_right, &self.delimiter);
             let new_id = self.base.get_id(&new_token_str);
             for symbols in &mut word_list {
                 if symbols.len() < 2 {

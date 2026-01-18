@@ -1,2 +1,3 @@
-pub mod bpe;
 mod base;
+pub mod bpe;
+pub mod wp;

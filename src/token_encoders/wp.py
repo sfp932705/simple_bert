@@ -20,7 +20,7 @@ class WordPieceTokenizer(BPETokenizer):
         self.delimiter = "##"
         self.do_lower_case = True
         self.trie_root = TrieNode()
-        self.min_score = -1e10  # Fallback score
+        self.min_score = -1e10
 
     def _build_index(self) -> None:
         self.trie_root = TrieNode()
