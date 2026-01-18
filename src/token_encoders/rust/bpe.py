@@ -1,0 +1,24 @@
+from typing import Any
+
+import rust
+
+from token_encoders.bpe import BPETokenizer
+from token_encoders.rust.base import RustBaseTokenizer
+
+
+class RustBPETokenizer(RustBaseTokenizer, BPETokenizer):
+    @property
+    def backend_tokenizer(self) -> Any:
+        return rust.token_encoders.RustBPETokenizer  # type:ignore
+
+    @property
+    def tokenizer_delimiter(self) -> str:
+        return self.delimiter
+
+    @property
+    def wordpiece_mode(self) -> bool:
+        return False
+
+    def train(self, corpus: list[str]) -> None:
+        super().train(corpus)
+        self.merges = self._backend.get_merges()
