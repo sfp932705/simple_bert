@@ -123,13 +123,11 @@ impl RustBPETokenizer {
         self.merges.clone()
     }
 
-    pub fn train(&mut self, corpus: Vec<String>) {
+    pub fn train(&mut self, corpus: String) {
         if corpus.is_empty() {
             return;
         }
-        let text_data = &corpus[0];
-
-        let intermediate_counts = text_data
+        let intermediate_counts = corpus
             .par_split_whitespace()
             .fold(FxHashMap::default, |mut map, w| {
                 *map.entry(w).or_insert(0) += 1;
@@ -309,12 +307,15 @@ impl RustBPETokenizer {
         if text.is_empty() {
             return Vec::new();
         }
+        let has_trailing_space = text.chars().last().map_or(false, |c| c.is_whitespace());
         let words: Vec<&str> = text.split_whitespace().collect();
         if words.is_empty() {
+            if has_trailing_space {
+                return vec![self.base.get_id(&self.delimiter)];
+            }
             return Vec::new();
         }
         let mut encoded_ids = Vec::new();
-
         let mut word_list: Vec<Vec<u32>> = words
             .iter()
             .map(|w| {
@@ -346,6 +347,10 @@ impl RustBPETokenizer {
         for symbols in word_list {
             encoded_ids.extend(symbols);
         }
+        if has_trailing_space {
+            encoded_ids.push(self.base.get_id(&self.delimiter));
+        }
+
         encoded_ids
     }
 

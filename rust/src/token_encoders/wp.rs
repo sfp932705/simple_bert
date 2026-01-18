@@ -29,6 +29,7 @@ pub struct RustWordPieceTokenizer {
 }
 
 impl RustWordPieceTokenizer {
+    #[inline(always)]
     fn is_punctuation(c: char) -> bool {
         let cp = c as u32;
         if (cp >= 33 && cp <= 47)
@@ -55,52 +56,116 @@ impl RustWordPieceTokenizer {
         }
     }
 
+    #[inline(always)]
     fn is_cjk(c: char) -> bool {
         let cp = c as u32;
         (cp >= 0x4E00 && cp <= 0x9FFF)
             || (cp >= 0x3400 && cp <= 0x4DBF)
             || (cp >= 0x20000 && cp <= 0x2A6DF)
+            || (cp >= 0x2A700 && cp <= 0x2B73F)
+            || (cp >= 0x2B740 && cp <= 0x2B81F)
+            || (cp >= 0x2B820 && cp <= 0x2CEAF)
+            || (cp >= 0xF900 && cp <= 0xFAFF)
+            || (cp >= 0x2F800 && cp <= 0x2FA1F)
+            || (cp >= 0xAC00 && cp <= 0xD7A3)
+            || (cp >= 0x1100 && cp <= 0x11FF)
+            || (cp >= 0x3130 && cp <= 0x318F)
     }
 
-    fn pre_tokenize_text(&self, text: &str) -> Vec<String> {
-        let mut processed_text = text.to_string();
-        if self.do_lower_case {
-            processed_text = processed_text.to_lowercase();
-
-            processed_text = processed_text
-                .nfd()
-                .filter(|c| get_general_category(*c) != GeneralCategory::NonspacingMark)
-                .collect();
+    #[inline(always)]
+    fn is_control(c: char) -> bool {
+        if c == '\t' || c == '\n' || c == '\r' {
+            return false;
         }
+        let cat = get_general_category(c);
+        cat == GeneralCategory::Control || cat == GeneralCategory::Format
+    }
 
-        let mut split_tokens = Vec::new();
+    /// ULTRA-FAST PRE-TOKENIZER
+    /// Writes directly to a single output String to avoid millions of allocations.
+    /// Returns: "Hello , world !" (Space separated tokens)
+    fn pre_tokenize_to_string(&self, text: &str) -> String {
+        // Reserve significant capacity to avoid re-allocations.
+        // 1.5x length is a heuristic for adding spaces around punctuation.
+        let mut output = String::with_capacity((text.len() as f64 * 1.5) as usize);
 
-        for token in processed_text.split_whitespace() {
-            let chars: Vec<char> = token.chars().collect();
-            let mut current_word = String::new();
-
-            for &c in &chars {
-                if Self::is_punctuation(c) || Self::is_cjk(c) {
-                    if !current_word.is_empty() {
-                        split_tokens.push(current_word.clone());
-                        current_word.clear();
+        // --- PATH A: FAST ASCII ---
+        if text.is_ascii() {
+            for c in text.chars() {
+                if self.do_lower_case {
+                    let lc = c.to_ascii_lowercase();
+                    if Self::is_control(lc) {
+                        continue;
                     }
-                    split_tokens.push(c.to_string());
+
+                    if Self::is_punctuation(lc) {
+                        output.push(' ');
+                        output.push(lc);
+                        output.push(' ');
+                    } else if lc.is_whitespace() {
+                        output.push(' ');
+                    } else {
+                        output.push(lc);
+                    }
                 } else {
-                    current_word.push(c);
+                    if Self::is_control(c) {
+                        continue;
+                    }
+                    if Self::is_punctuation(c) {
+                        output.push(' ');
+                        output.push(c);
+                        output.push(' ');
+                    } else if c.is_whitespace() {
+                        output.push(' ');
+                    } else {
+                        output.push(c);
+                    }
                 }
             }
-            if !current_word.is_empty() {
-                split_tokens.push(current_word);
+            return output;
+        }
+
+        // --- PATH B: UNICODE (NFD + CATEGORIES) ---
+        let chars_iter = if self.do_lower_case {
+            text.chars()
+                .flat_map(|c| c.to_lowercase())
+                .nfd()
+                .filter(|c| {
+                    !Self::is_control(*c)
+                        && get_general_category(*c) != GeneralCategory::NonspacingMark
+                })
+                .collect::<Vec<char>>() // Collect needed to iterate safely, but simpler than String
+        } else {
+            text.chars()
+                .filter(|c| !Self::is_control(*c))
+                .collect::<Vec<char>>()
+        };
+
+        for c in chars_iter {
+            if c.is_whitespace() {
+                output.push(' ');
+            } else if Self::is_punctuation(c) || Self::is_cjk(c) {
+                output.push(' ');
+                output.push(c);
+                output.push(' ');
+            } else {
+                output.push(c);
             }
         }
-        split_tokens
+        output
+    }
+
+    // Legacy helper for inference (creates list of strings)
+    fn pre_tokenize_text(&self, text: &str) -> Vec<String> {
+        self.pre_tokenize_to_string(text)
+            .split_whitespace()
+            .map(|s| s.to_string())
+            .collect()
     }
 
     fn build_index(&mut self) {
         self.trie_root = TrieNode::new();
         let vocab = self.bpe.get_vocab();
-
         for (token, id) in vocab {
             let mut node = &mut self.trie_root;
             for c in token.chars() {
@@ -122,6 +187,7 @@ impl RustWordPieceTokenizer {
         special_tokens: Vec<String>,
         unused_tokens: usize,
         delimiter: Option<String>,
+        wordpiece_mode: Option<bool>,
     ) -> Self {
         let delim = delimiter.unwrap_or_else(|| "##".to_string());
 
@@ -131,7 +197,7 @@ impl RustWordPieceTokenizer {
                 special_tokens,
                 unused_tokens,
                 delim.clone(),
-                Some(true),
+                Option::from(wordpiece_mode.unwrap_or(true)),
             ),
             trie_root: TrieNode::new(),
             do_lower_case: true,
@@ -148,16 +214,19 @@ impl RustWordPieceTokenizer {
         self.bpe.get_merges()
     }
 
-    pub fn train(&mut self, corpus: Vec<String>) {
-        let processed_corpus: Vec<String> = corpus
-            .par_iter()
-            .map(|text| {
-                let tokens = self.pre_tokenize_text(text);
-                tokens.join(" ")
-            })
-            .collect();
+    // OPTIMIZED TRAIN
+    pub fn train(&mut self, corpus: String) {
+        // 1. Parallel Pre-tokenization using the ZERO-ALLOCATION helper
+        let processed_corpus: String = corpus
+            .par_lines()
+            .map(|line| self.pre_tokenize_to_string(line)) // Returns String directly
+            .collect::<Vec<String>>()
+            .join("\n");
 
+        // 2. Delegate to BPE
         self.bpe.train(processed_corpus);
+
+        // 3. Build Index
         self.build_index();
     }
 
@@ -165,7 +234,7 @@ impl RustWordPieceTokenizer {
         if self.trie_root.children.is_empty() && !self.bpe.get_vocab().is_empty() {
             self.build_index();
         }
-
+        // We can reuse the string helper here too, but splitting is cheap for single inference
         let words = self.pre_tokenize_text(&text);
         let mut output_ids = Vec::new();
         let unk_id = *self.bpe.base.vocab.get(&self.unk_token).unwrap_or(&0);
@@ -233,7 +302,6 @@ impl RustWordPieceTokenizer {
 
     pub fn decode(&self, ids: Vec<u32>) -> String {
         let vocab = &self.bpe.base.inverse_vocab;
-
         let tokens: Vec<String> = ids
             .iter()
             .map(|id| {
@@ -243,9 +311,8 @@ impl RustWordPieceTokenizer {
                     .unwrap_or_else(|| self.unk_token.clone())
             })
             .collect();
-
-        let joined = tokens.join(" ");
-        let target = format!(" {}", self.delimiter);
-        joined.replace(&target, "")
+        tokens
+            .join(" ")
+            .replace(&format!(" {}", self.delimiter), "")
     }
 }

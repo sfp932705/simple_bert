@@ -44,9 +44,6 @@ impl TokenizerModel {
     }
 }
 
-// -----------------------------------------------------------------------------
-// Base Tokenizer Struct
-// -----------------------------------------------------------------------------
 #[derive(Clone)]
 pub struct BaseTokenizer {
     pub vocab: FxHashMap<String, u32>,
