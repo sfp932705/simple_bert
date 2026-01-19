@@ -128,7 +128,7 @@ impl RustBPETokenizer {
             return;
         }
         let intermediate_counts = corpus
-            .par_split_whitespace()
+            .par_split(' ')
             .fold(FxHashMap::default, |mut map, w| {
                 *map.entry(w).or_insert(0) += 1;
                 map
@@ -307,12 +307,8 @@ impl RustBPETokenizer {
         if text.is_empty() {
             return Vec::new();
         }
-        let has_trailing_space = text.chars().last().map_or(false, |c| c.is_whitespace());
-        let words: Vec<&str> = text.split_whitespace().collect();
+        let words: Vec<&str> = text.split(' ').collect();
         if words.is_empty() {
-            if has_trailing_space {
-                return vec![self.base.get_id(&self.delimiter)];
-            }
             return Vec::new();
         }
         let mut encoded_ids = Vec::new();
@@ -347,10 +343,6 @@ impl RustBPETokenizer {
         for symbols in word_list {
             encoded_ids.extend(symbols);
         }
-        if has_trailing_space {
-            encoded_ids.push(self.base.get_id(&self.delimiter));
-        }
-
         encoded_ids
     }
 

@@ -1,3 +1,4 @@
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -13,13 +14,14 @@ class BPETokenizer(BaseTokenizer):
         self.vocab_counts: list[int] = []
         self.delimiter = "Ġ"
         self.unk_token = "[UNK]"
+        self.split_pattern = re.compile(r"[^\s]+|\n")
 
     def _prepare_corpus_counts(self, corpus: list[str]) -> Counter[str]:
         word_ctr = Counter()
         for text in corpus:
             if not text:
                 continue
-            words = text.split()
+            words = self.split_pattern.findall(text)
             if not words:
                 continue
             word_ctr[words[0]] += 1
@@ -115,7 +117,7 @@ class BPETokenizer(BaseTokenizer):
     def encode(self, text: str) -> list[int]:
         if not text:
             return []
-        words = text.split()
+        words = self.split_pattern.findall(text)
         if not words:
             return []
 
