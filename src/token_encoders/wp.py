@@ -54,7 +54,7 @@ class WordPieceTokenizer(BPETokenizer):
         )
 
     def _prepare_corpus_counts(self, corpus: list[str]) -> Counter[str]:
-        word_freqs = Counter()
+        word_freqs: Counter[str] = Counter()
         for text in corpus:
             words = self.pre_tokenize(text)
             word_freqs.update(words)
@@ -78,7 +78,7 @@ class WordPieceTokenizer(BPETokenizer):
         split_tokens = []
 
         for token in tokens:
-            current_word = []
+            current_word: list = []
             for char in token:
                 if self._is_punctuation(char) or self._is_cjk(char):
                     if current_word:
@@ -104,15 +104,16 @@ class WordPieceTokenizer(BPETokenizer):
             self._build_index()
 
         words = self.pre_tokenize(text)
-        output_ids = []
+        output_ids: list[int] = []
         unk_id = self.vocab.get(self.unk_token)
+        assert unk_id is not None
         continuing_root = self.trie_root
         if self.delimiter[0] in continuing_root.children:
             for char in self.delimiter:
                 if char in continuing_root.children:
                     continuing_root = continuing_root.children[char]
                 else:
-                    continuing_root = None
+                    continuing_root = None  # type:ignore
                     break
 
         for word in words:

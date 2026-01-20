@@ -17,7 +17,7 @@ class BPETokenizer(BaseTokenizer):
         self.split_pattern = re.compile(r"[^\s]+|\n")
 
     def _prepare_corpus_counts(self, corpus: list[str]) -> Counter[str]:
-        word_ctr = Counter()
+        word_ctr: Counter[str] = Counter()
         for text in corpus:
             if not text:
                 continue

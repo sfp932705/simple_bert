@@ -45,7 +45,7 @@ class RustBaseTokenizer(BaseTokenizer):
         self.inverse_vocab = {v: k for k, v in self.vocab.items()}
 
     def encode(self, text: str) -> list[int]:
-        ids =  self._backend.encode(text)
+        ids = self._backend.encode(text)
         print(ids)
         return self._backend.encode(text)
 
