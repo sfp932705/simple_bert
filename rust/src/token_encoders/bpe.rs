@@ -303,6 +303,12 @@ impl RustBPETokenizer {
         }
     }
 
+    pub fn set_state(&mut self, vocab: FxHashMap<String, u32>, merges: Vec<(String, String)>) {
+        self.base.vocab = vocab.clone();
+        self.merges = merges;
+        self.base.inverse_vocab = vocab.into_iter().map(|(token, id)| (id, token)).collect();
+        self.base.vocab_size = self.base.vocab.len();
+    }
     pub fn encode(&self, text: String) -> Vec<u32> {
         if text.is_empty() {
             return Vec::new();

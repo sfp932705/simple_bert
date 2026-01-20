@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 import rust
@@ -18,3 +19,7 @@ class RustWordPieceTokenizer(RustBaseTokenizer, WordPieceTokenizer):
     @property
     def wordpiece_mode(self) -> bool:
         return True
+
+    def load(self, directory: Path) -> None:
+        WordPieceTokenizer.load(self, directory)
+        self._backend.set_state(self.vocab, self.merges)

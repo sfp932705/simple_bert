@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 import rust
@@ -22,3 +23,7 @@ class RustBPETokenizer(RustBaseTokenizer, BPETokenizer):
     def train(self, corpus: list[str]) -> None:
         super().train(corpus)
         self.merges = self._backend.get_merges()
+
+    def load(self, directory: Path) -> None:
+        BPETokenizer.load(self, directory)
+        self._backend.set_state(self.vocab, self.merges)

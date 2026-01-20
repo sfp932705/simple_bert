@@ -210,6 +210,9 @@ impl RustWordPieceTokenizer {
         self.build_index();
     }
 
+    pub fn set_state(&mut self, vocab: FxHashMap<String, u32>, merges: Vec<(String, String)>) {
+        self.bpe.set_state(vocab, merges)
+    }
     pub fn encode(&mut self, text: String) -> Vec<u32> {
         if self.trie_root.children.is_empty() && !self.bpe.get_vocab().is_empty() {
             self.build_index();

@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any
 
 from settings import TokenizerSettings
@@ -9,6 +10,10 @@ class RustBaseTokenizer(BaseTokenizer):
     def __init__(self, settings: TokenizerSettings):
         super().__init__(settings)
         self._backend = self.get_backend()  # type:ignore
+
+    @abstractmethod
+    def load(self, directory: Path) -> None:
+        pass
 
     @property
     @abstractmethod
@@ -40,6 +45,8 @@ class RustBaseTokenizer(BaseTokenizer):
         self.inverse_vocab = {v: k for k, v in self.vocab.items()}
 
     def encode(self, text: str) -> list[int]:
+        ids =  self._backend.encode(text)
+        print(ids)
         return self._backend.encode(text)
 
     def decode(self, ids: list[int]) -> str:
