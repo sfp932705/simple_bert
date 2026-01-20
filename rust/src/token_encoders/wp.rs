@@ -47,11 +47,7 @@ impl RustWordPieceTokenizer {
             | GeneralCategory::ClosePunctuation
             | GeneralCategory::InitialPunctuation
             | GeneralCategory::FinalPunctuation
-            | GeneralCategory::OtherPunctuation
-            | GeneralCategory::MathSymbol
-            | GeneralCategory::CurrencySymbol
-            | GeneralCategory::ModifierSymbol
-            | GeneralCategory::OtherSymbol => true,
+            | GeneralCategory::OtherPunctuation => true,
             _ => false,
         }
     }
@@ -67,9 +63,6 @@ impl RustWordPieceTokenizer {
             || (cp >= 0x2B820 && cp <= 0x2CEAF)
             || (cp >= 0xF900 && cp <= 0xFAFF)
             || (cp >= 0x2F800 && cp <= 0x2FA1F)
-            || (cp >= 0xAC00 && cp <= 0xD7A3)
-            || (cp >= 0x1100 && cp <= 0x11FF)
-            || (cp >= 0x3130 && cp <= 0x318F)
     }
 
     #[inline(always)]
@@ -81,15 +74,9 @@ impl RustWordPieceTokenizer {
         cat == GeneralCategory::Control || cat == GeneralCategory::Format
     }
 
-    /// ULTRA-FAST PRE-TOKENIZER
-    /// Writes directly to a single output String to avoid millions of allocations.
-    /// Returns: "Hello , world !" (Space separated tokens)
     fn pre_tokenize_to_string(&self, text: &str) -> String {
-        // Reserve significant capacity to avoid re-allocations.
-        // 1.5x length is a heuristic for adding spaces around punctuation.
         let mut output = String::with_capacity((text.len() as f64 * 1.5) as usize);
 
-        // --- PATH A: FAST ASCII ---
         if text.is_ascii() {
             for c in text.chars() {
                 if self.do_lower_case {
@@ -125,7 +112,6 @@ impl RustWordPieceTokenizer {
             return output;
         }
 
-        // --- PATH B: UNICODE (NFD + CATEGORIES) ---
         let chars_iter = if self.do_lower_case {
             text.chars()
                 .flat_map(|c| c.to_lowercase())
@@ -134,7 +120,7 @@ impl RustWordPieceTokenizer {
                     !Self::is_control(*c)
                         && get_general_category(*c) != GeneralCategory::NonspacingMark
                 })
-                .collect::<Vec<char>>() // Collect needed to iterate safely, but simpler than String
+                .collect::<Vec<char>>()
         } else {
             text.chars()
                 .filter(|c| !Self::is_control(*c))
@@ -155,7 +141,6 @@ impl RustWordPieceTokenizer {
         output
     }
 
-    // Legacy helper for inference (creates list of strings)
     fn pre_tokenize_text(&self, text: &str) -> Vec<String> {
         self.pre_tokenize_to_string(text)
             .split_whitespace()
@@ -214,19 +199,14 @@ impl RustWordPieceTokenizer {
         self.bpe.get_merges()
     }
 
-    // OPTIMIZED TRAIN
     pub fn train(&mut self, corpus: String) {
-        // 1. Parallel Pre-tokenization using the ZERO-ALLOCATION helper
         let processed_corpus: String = corpus
             .par_lines()
-            .map(|line| self.pre_tokenize_to_string(line)) // Returns String directly
+            .map(|line| self.pre_tokenize_to_string(line))
             .collect::<Vec<String>>()
             .join("\n");
 
-        // 2. Delegate to BPE
         self.bpe.train(processed_corpus);
-
-        // 3. Build Index
         self.build_index();
     }
 
@@ -234,7 +214,6 @@ impl RustWordPieceTokenizer {
         if self.trie_root.children.is_empty() && !self.bpe.get_vocab().is_empty() {
             self.build_index();
         }
-        // We can reuse the string helper here too, but splitting is cheap for single inference
         let words = self.pre_tokenize_text(&text);
         let mut output_ids = Vec::new();
         let unk_id = *self.bpe.base.vocab.get(&self.unk_token).unwrap_or(&0);
