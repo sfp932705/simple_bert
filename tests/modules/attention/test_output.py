@@ -1,6 +1,6 @@
 import torch
 
-from models.attention.output import AttentionOutput
+from modules.attention.output import AttentionOutput
 from settings import AttentionSettings
 
 

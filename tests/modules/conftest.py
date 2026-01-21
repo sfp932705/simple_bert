@@ -1,7 +1,18 @@
 import pytest
 import torch
 
-from settings import AttentionSettings
+from modules.embeddings import Embeddings
+from settings import AttentionSettings, EmbeddingSettings
+
+
+@pytest.fixture
+def embedding_settings():
+    return EmbeddingSettings(vocab_size=100, hidden_size=32, max_position_embeddings=50)
+
+
+@pytest.fixture
+def embeddings(embedding_settings: EmbeddingSettings):
+    return Embeddings(embedding_settings)
 
 
 @pytest.fixture
@@ -15,10 +26,12 @@ def attention_settings() -> AttentionSettings:
         layer_norm_eps=1e-12,
     )
 
+
 @pytest.fixture
-def bad_attention_settings(attention_settings:AttentionSettings):
+def bad_attention_settings(attention_settings: AttentionSettings):
     attention_settings.num_attention_heads = 5
     return attention_settings
+
 
 @pytest.fixture
 def batch_size() -> int:

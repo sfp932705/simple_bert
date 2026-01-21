@@ -1,6 +1,6 @@
 import torch
 
-from models.attention.layer import AttentionLayer
+from modules.attention.layer import AttentionLayer
 from settings import AttentionSettings
 
 
