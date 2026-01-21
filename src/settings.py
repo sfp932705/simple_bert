@@ -27,6 +27,12 @@ class FeedForwardSettings(LayerCommonSettings):
     hidden_act: str = "gelu"
 
 
+class EncoderSettings(LayerCommonSettings):
+    ff: FeedForwardSettings = Field(default_factory=FeedForwardSettings)
+    attention: AttentionSettings = Field(default_factory=AttentionSettings)
+    num_hidden_layers: int = 12
+
+
 class TokenizerSettings(VocabSettings):
     vocab_size: int = 30522
     special_tokens: list[str] = ["[PAD]", "[MASK]", "[CLS]", "[SEP]", "[UNK]"]
@@ -36,6 +42,7 @@ class TokenizerSettings(VocabSettings):
 class Settings(BaseSettings):
     attention: AttentionSettings = Field(default_factory=AttentionSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    encoder: EncoderSettings = Field(default_factory=EncoderSettings)
     ff: FeedForwardSettings = Field(default_factory=FeedForwardSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
     model_config = SettingsConfigDict(
