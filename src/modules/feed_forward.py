@@ -5,7 +5,7 @@ from enum import Enum
 import torch
 from torch import nn
 
-from settings import FeedForwardSettings
+from settings import BertSettings
 
 
 class Activation(Enum):
@@ -25,7 +25,7 @@ class Activation(Enum):
 
 
 class FeedForwardLayer(nn.Module):
-    def __init__(self, settings: FeedForwardSettings):
+    def __init__(self, settings: BertSettings):
         super().__init__()
         self.dense_expansion = nn.Linear(
             settings.hidden_size, settings.intermediate_size

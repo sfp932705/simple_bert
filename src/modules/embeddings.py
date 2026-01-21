@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 
-from settings import EmbeddingSettings
+from settings import BertSettings
 
 
 class Embeddings(nn.Module):
     position_ids: torch.Tensor
 
-    def __init__(self, settings: EmbeddingSettings):
+    def __init__(self, settings: BertSettings):
         super().__init__()
         self.word_embeddings = nn.Embedding(
             settings.vocab_size, settings.hidden_size, padding_idx=0

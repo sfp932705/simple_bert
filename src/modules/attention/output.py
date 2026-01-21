@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 
-from settings import AttentionSettings
+from settings import BertSettings
 
 
 class AttentionOutput(nn.Module):
-    def __init__(self, settings: AttentionSettings):
+    def __init__(self, settings: BertSettings):
         super().__init__()
         self.dense = nn.Linear(settings.hidden_size, settings.hidden_size)
         self.LayerNorm = nn.LayerNorm(settings.hidden_size, eps=settings.layer_norm_eps)
