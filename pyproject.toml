@@ -3,7 +3,7 @@ name = "simple_bert"
 description = "A package for training small and simple bert models"
 readme = "README.md"
 authors = [{ name = "Sergio Frayle Perez", email = "sfp932705@gmail.com" }]
-version = "0.0.3"
+version = "0.0.4"
 requires-python = ">=3.13"
 dependencies = ["torch==2.9.1", "pydantic-settings==2.12.0"]
 
