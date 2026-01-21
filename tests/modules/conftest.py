@@ -5,11 +5,13 @@ from modules.embeddings import Embeddings
 from modules.encoders.encoder import Encoder
 from modules.encoders.layer import StackedEncoder
 from modules.feed_forward import FeedForwardLayer
+from modules.pooler import Pooler
 from settings import (
     AttentionSettings,
     EmbeddingSettings,
     EncoderSettings,
     FeedForwardSettings,
+    LayerCommonSettings,
 )
 
 
@@ -98,3 +100,10 @@ def sample_hidden_states(
 @pytest.fixture
 def sample_attention_mask() -> torch.Tensor:
     return torch.zeros(2, 1, 1, 5)
+
+
+@pytest.fixture
+def pooler(hidden_size: int) -> Pooler:
+    settings = LayerCommonSettings()
+    settings.hidden_size = hidden_size
+    return Pooler(settings)
