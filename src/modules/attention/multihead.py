@@ -24,8 +24,10 @@ class MultiHeadAttention(nn.Module):
         self.dropout = nn.Dropout(settings.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
+        # new shape will be: (Batch, Seq_Len, Num_Heads, Head_Dim)
         new_x_shape = x.size()[:-1] + (self.num_heads, self.head_dim)
         x = x.view(*new_x_shape)
+        # After permutation: (Batch, Num_Heads, Seq_Len, Head_Dim)
         return x.permute(0, 2, 1, 3)
 
     def forward(
