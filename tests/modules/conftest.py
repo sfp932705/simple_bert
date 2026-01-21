@@ -2,9 +2,17 @@ import pytest
 import torch
 
 from modules.embeddings import Embeddings
-from modules.encoder import Encoder
+from modules.encoders.encoder import Encoder
+from modules.encoders.layer import StackedEncoder
 from modules.feed_forward import FeedForwardLayer
-from settings import AttentionSettings, EmbeddingSettings, FeedForwardSettings
+from modules.pooler import Pooler
+from settings import (
+    AttentionSettings,
+    EmbeddingSettings,
+    EncoderSettings,
+    FeedForwardSettings,
+    LayerCommonSettings,
+)
 
 
 @pytest.fixture
@@ -18,20 +26,20 @@ def seq_len() -> int:
 
 
 @pytest.fixture
-def hidden_state() -> int:
+def hidden_size() -> int:
     return 32
 
 
 @pytest.fixture
-def embedding_settings(hidden_state: int) -> EmbeddingSettings:
+def embedding_settings(hidden_size: int) -> EmbeddingSettings:
     return EmbeddingSettings(
-        vocab_size=100, hidden_size=hidden_state, max_position_embeddings=50
+        vocab_size=100, hidden_size=hidden_size, max_position_embeddings=50
     )
 
 
 @pytest.fixture
-def ff_settings(hidden_state: int) -> FeedForwardSettings:
-    return FeedForwardSettings(hidden_size=hidden_state, intermediate_size=64)
+def ff_settings(hidden_size: int) -> FeedForwardSettings:
+    return FeedForwardSettings(hidden_size=hidden_size, intermediate_size=64)
 
 
 @pytest.fixture
@@ -51,10 +59,10 @@ def embeddings(embedding_settings: EmbeddingSettings) -> Embeddings:
 
 
 @pytest.fixture
-def attention_settings(hidden_state: int) -> AttentionSettings:
+def attention_settings(hidden_size: int) -> AttentionSettings:
     return AttentionSettings(
         vocab_size=100,
-        hidden_size=hidden_state,
+        hidden_size=hidden_size,
         num_attention_heads=4,
         attention_probs_dropout_prob=0.1,
         hidden_dropout_prob=0.1,
@@ -72,7 +80,14 @@ def bad_attention_settings(attention_settings: AttentionSettings):
 def encoder(
     attention_settings: AttentionSettings, ff_settings: FeedForwardSettings
 ) -> Encoder:
-    return Encoder(attention_settings, ff_settings)
+    return Encoder(EncoderSettings(attention=attention_settings, ff=ff_settings))
+
+
+@pytest.fixture
+def encoder_layer(
+    attention_settings: AttentionSettings, ff_settings: FeedForwardSettings
+) -> StackedEncoder:
+    return StackedEncoder(EncoderSettings(attention=attention_settings, ff=ff_settings))
 
 
 @pytest.fixture
@@ -85,3 +100,10 @@ def sample_hidden_states(
 @pytest.fixture
 def sample_attention_mask() -> torch.Tensor:
     return torch.zeros(2, 1, 1, 5)
+
+
+@pytest.fixture
+def pooler(hidden_size: int) -> Pooler:
+    settings = LayerCommonSettings()
+    settings.hidden_size = hidden_size
+    return Pooler(settings)
