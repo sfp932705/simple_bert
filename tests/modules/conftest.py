@@ -2,16 +2,33 @@ import pytest
 import torch
 
 from modules.embeddings import Embeddings
-from settings import AttentionSettings, EmbeddingSettings
+from modules.feed_forward import FeedForwardLayer
+from settings import AttentionSettings, EmbeddingSettings, FeedForwardSettings
 
 
 @pytest.fixture
-def embedding_settings():
+def embedding_settings() -> EmbeddingSettings:
     return EmbeddingSettings(vocab_size=100, hidden_size=32, max_position_embeddings=50)
 
 
 @pytest.fixture
-def embeddings(embedding_settings: EmbeddingSettings):
+def ff_settings() -> FeedForwardSettings:
+    return FeedForwardSettings(hidden_size=32, intermediate_size=64)
+
+
+@pytest.fixture
+def ff(ff_settings: FeedForwardSettings) -> FeedForwardLayer:
+    return FeedForwardLayer(ff_settings)
+
+
+@pytest.fixture
+def ff_relu(ff_settings: FeedForwardSettings) -> FeedForwardLayer:
+    ff_settings.hidden_act = "relu"
+    return FeedForwardLayer(ff_settings)
+
+
+@pytest.fixture
+def embeddings(embedding_settings: EmbeddingSettings) -> Embeddings:
     return Embeddings(embedding_settings)
 
 

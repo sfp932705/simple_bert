@@ -22,6 +22,11 @@ class EmbeddingSettings(LayerCommonSettings):
     type_vocab_size: int = 2
 
 
+class FeedForwardSettings(LayerCommonSettings):
+    intermediate_size: int = 3072
+    hidden_act: str = "gelu"
+
+
 class TokenizerSettings(VocabSettings):
     vocab_size: int = 30522
     special_tokens: list[str] = ["[PAD]", "[MASK]", "[CLS]", "[SEP]", "[UNK]"]
@@ -31,6 +36,7 @@ class TokenizerSettings(VocabSettings):
 class Settings(BaseSettings):
     attention: AttentionSettings = Field(default_factory=AttentionSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    ff: FeedForwardSettings = Field(default_factory=FeedForwardSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
     model_config = SettingsConfigDict(
         env_file=".env",
