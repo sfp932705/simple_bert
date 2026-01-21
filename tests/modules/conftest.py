@@ -2,18 +2,36 @@ import pytest
 import torch
 
 from modules.embeddings import Embeddings
+from modules.encoder import Encoder
 from modules.feed_forward import FeedForwardLayer
 from settings import AttentionSettings, EmbeddingSettings, FeedForwardSettings
 
 
 @pytest.fixture
-def embedding_settings() -> EmbeddingSettings:
-    return EmbeddingSettings(vocab_size=100, hidden_size=32, max_position_embeddings=50)
+def batch_size() -> int:
+    return 2
 
 
 @pytest.fixture
-def ff_settings() -> FeedForwardSettings:
-    return FeedForwardSettings(hidden_size=32, intermediate_size=64)
+def seq_len() -> int:
+    return 5
+
+
+@pytest.fixture
+def hidden_state() -> int:
+    return 32
+
+
+@pytest.fixture
+def embedding_settings(hidden_state: int) -> EmbeddingSettings:
+    return EmbeddingSettings(
+        vocab_size=100, hidden_size=hidden_state, max_position_embeddings=50
+    )
+
+
+@pytest.fixture
+def ff_settings(hidden_state: int) -> FeedForwardSettings:
+    return FeedForwardSettings(hidden_size=hidden_state, intermediate_size=64)
 
 
 @pytest.fixture
@@ -33,10 +51,10 @@ def embeddings(embedding_settings: EmbeddingSettings) -> Embeddings:
 
 
 @pytest.fixture
-def attention_settings() -> AttentionSettings:
+def attention_settings(hidden_state: int) -> AttentionSettings:
     return AttentionSettings(
         vocab_size=100,
-        hidden_size=32,
+        hidden_size=hidden_state,
         num_attention_heads=4,
         attention_probs_dropout_prob=0.1,
         hidden_dropout_prob=0.1,
@@ -51,13 +69,10 @@ def bad_attention_settings(attention_settings: AttentionSettings):
 
 
 @pytest.fixture
-def batch_size() -> int:
-    return 2
-
-
-@pytest.fixture
-def seq_len() -> int:
-    return 5
+def encoder(
+    attention_settings: AttentionSettings, ff_settings: FeedForwardSettings
+) -> Encoder:
+    return Encoder(attention_settings, ff_settings)
 
 
 @pytest.fixture
