@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from models.attention.multihead import MultiHeadAttention
-from models.attention.output import AttentionOutput
+from modules.attention.multihead import MultiHeadAttention
+from modules.attention.output import AttentionOutput
 from settings import AttentionSettings
 
 

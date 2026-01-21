@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from models.attention.multihead import MultiHeadAttention
+from modules.attention.multihead import MultiHeadAttention
 from settings import AttentionSettings
 
 
