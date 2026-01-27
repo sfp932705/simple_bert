@@ -26,10 +26,10 @@ def hidden_size() -> int:
 
 
 @pytest.fixture
-def settings() -> BertSettings:
+def settings(hidden_size: int) -> BertSettings:
     return BertSettings(
         vocab_size=100,
-        hidden_size=32,
+        hidden_size=hidden_size,
         max_position_embeddings=512,
         type_vocab_size=2,
         layer_norm_eps=1e-12,
@@ -87,10 +87,17 @@ def sample_attention_mask() -> torch.Tensor:
 
 
 @pytest.fixture
+def sample_indices(
+    settings: BertSettings, batch_size: int, seq_len: int
+) -> torch.Tensor:
+    return torch.randint(0, settings.vocab_size, (batch_size, seq_len))
+
+
+@pytest.fixture
 def pooler(hidden_size: int) -> Pooler:
     return Pooler(hidden_size)
 
 
 @pytest.fixture
-def bert() -> Bert:
-    return Bert(BertSettings())
+def bert(settings: BertSettings) -> Bert:
+    return Bert(settings=settings)
