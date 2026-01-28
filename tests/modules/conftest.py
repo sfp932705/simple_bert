@@ -2,8 +2,8 @@ import pytest
 import torch
 
 from modules.bert.backbone import BertBackbone
-from modules.bert.cls_head import SequenceClassificationBert
-from modules.bert.mlm_head import MaskedLanguageModellingBert
+from modules.bert.finetuning import BertForSequenceClassification
+from modules.bert.pretraining import BertForPreTraining
 from modules.embeddings import Embeddings
 from modules.encoders.encoder import Encoder
 from modules.encoders.layer import StackedEncoder
@@ -116,10 +116,10 @@ def bert_backbone(settings: BertSettings) -> BertBackbone:
 
 
 @pytest.fixture
-def mlm_bert(settings: BertSettings) -> MaskedLanguageModellingBert:
-    return MaskedLanguageModellingBert(settings=settings)
+def pretraining_bert(settings: BertSettings) -> BertForPreTraining:
+    return BertForPreTraining(settings)
 
 
 @pytest.fixture
-def cls_bert(settings: BertSettings, num_classes: int) -> SequenceClassificationBert:
-    return SequenceClassificationBert(settings, num_classes)
+def finetuning_bert(settings: BertSettings, num_classes: int):
+    return BertForSequenceClassification(settings, num_classes=num_classes)
