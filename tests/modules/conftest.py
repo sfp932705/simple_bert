@@ -2,6 +2,7 @@ import pytest
 import torch
 
 from modules.bert.backbone import BertBackbone
+from modules.bert.cls_head import SequenceClassificationBert
 from modules.bert.mlm_head import MaskedLanguageModellingBert
 from modules.embeddings import Embeddings
 from modules.encoders.encoder import Encoder
@@ -29,6 +30,11 @@ def hidden_size() -> int:
 @pytest.fixture
 def vocab_size() -> int:
     return 100
+
+
+@pytest.fixture
+def num_classes() -> int:
+    return 5
 
 
 @pytest.fixture
@@ -112,3 +118,8 @@ def bert_backbone(settings: BertSettings) -> BertBackbone:
 @pytest.fixture
 def mlm_bert(settings: BertSettings) -> MaskedLanguageModellingBert:
     return MaskedLanguageModellingBert(settings=settings)
+
+
+@pytest.fixture
+def cls_bert(settings: BertSettings, num_classes: int) -> SequenceClassificationBert:
+    return SequenceClassificationBert(settings, num_classes)
