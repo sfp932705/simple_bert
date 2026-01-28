@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 
+from modules.bert.backbone import BertBackbone
 from modules.bert.heads.cls import SequenceClassificationHead
-from src.modules.bert.backbone import BertBackbone
-from src.settings import BertSettings
+from settings import BertSettings
 
 
 class BertForSequenceClassification(nn.Module):
@@ -19,7 +19,6 @@ class BertForSequenceClassification(nn.Module):
         attention_mask: torch.Tensor | None = None,
         token_type_ids: torch.Tensor | None = None,
     ) -> torch.Tensor:
-
         _, pooled_output = self.bert(
             input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
         )

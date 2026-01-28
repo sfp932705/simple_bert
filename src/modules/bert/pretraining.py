@@ -21,7 +21,6 @@ class BertForPreTraining(nn.Module):
         attention_mask: torch.Tensor | None = None,
         token_type_ids: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-
         sequence_output, pooled_output = self.bert(
             input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids
         )
