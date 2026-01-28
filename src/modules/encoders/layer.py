@@ -2,11 +2,11 @@ import torch
 from torch import nn
 
 from modules.encoders.encoder import Encoder
-from settings import EncoderSettings
+from settings import BertSettings
 
 
 class StackedEncoder(nn.Module):
-    def __init__(self, settings: EncoderSettings):
+    def __init__(self, settings: BertSettings):
         super().__init__()
         self.layer = nn.ModuleList(
             [Encoder(settings) for _ in range(settings.num_hidden_layers)]

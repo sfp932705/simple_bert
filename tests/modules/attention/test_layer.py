@@ -1,15 +1,15 @@
 import torch
 
 from modules.attention.layer import AttentionLayer
-from settings import AttentionSettings
+from settings import BertSettings
 
 
 def test_attention_layer_integration(
-    attention_settings: AttentionSettings,
+    settings: BertSettings,
     sample_hidden_states: torch.Tensor,
     sample_attention_mask: torch.Tensor,
 ):
-    layer = AttentionLayer(attention_settings)
+    layer = AttentionLayer(settings)
     output = layer(sample_hidden_states, attention_mask=sample_attention_mask)
     assert output.shape == sample_hidden_states.shape
     output.sum().backward()
@@ -18,9 +18,9 @@ def test_attention_layer_integration(
 
 
 def test_attention_layer_deterministic_when_no_dropout(
-    attention_settings: AttentionSettings, sample_hidden_states: torch.Tensor
+    settings: BertSettings, sample_hidden_states: torch.Tensor
 ):
-    settings = attention_settings.model_copy(
+    settings = settings.model_copy(
         update={"attention_probs_dropout_prob": 0.0, "hidden_dropout_prob": 0.0}
     )
 
@@ -29,8 +29,8 @@ def test_attention_layer_deterministic_when_no_dropout(
 
 
 def test_attention_layer_deterministic_when_eval(
-    attention_settings: AttentionSettings, sample_hidden_states: torch.Tensor
+    settings: BertSettings, sample_hidden_states: torch.Tensor
 ):
-    layer = AttentionLayer(attention_settings)
+    layer = AttentionLayer(settings)
     layer.eval()
     assert torch.allclose(layer(sample_hidden_states), layer(sample_hidden_states))

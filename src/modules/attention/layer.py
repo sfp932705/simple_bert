@@ -3,11 +3,11 @@ from torch import nn
 
 from modules.attention.multihead import MultiHeadAttention
 from modules.attention.output import AttentionOutput
-from settings import AttentionSettings
+from settings import BertSettings
 
 
 class AttentionLayer(nn.Module):
-    def __init__(self, settings: AttentionSettings):
+    def __init__(self, settings: BertSettings):
         super().__init__()
         self.multi_head = MultiHeadAttention(settings)
         self.output = AttentionOutput(settings)

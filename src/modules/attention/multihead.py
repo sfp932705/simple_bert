@@ -3,11 +3,11 @@ import math
 import torch
 from torch import nn
 
-from settings import AttentionSettings
+from settings import BertSettings
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, settings: AttentionSettings):
+    def __init__(self, settings: BertSettings):
         super().__init__()
         if settings.hidden_size % settings.num_attention_heads != 0:
             raise ValueError(

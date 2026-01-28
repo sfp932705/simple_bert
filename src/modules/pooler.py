@@ -1,13 +1,11 @@
 import torch
 from torch import nn
 
-from settings import LayerCommonSettings
-
 
 class Pooler(nn.Module):
-    def __init__(self, settings: LayerCommonSettings):
+    def __init__(self, hidden_size: int):
         super().__init__()
-        self.dense = nn.Linear(settings.hidden_size, settings.hidden_size)
+        self.dense = nn.Linear(hidden_size, hidden_size)
         self.activation = nn.Tanh()
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
