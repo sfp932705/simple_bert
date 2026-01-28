@@ -1,7 +1,8 @@
 import pytest
 import torch
 
-from modules.bert import Bert
+from modules.bert.backbone import BertBackbone
+from modules.bert.mlm_head import MaskedLanguageModellingBert
 from modules.embeddings import Embeddings
 from modules.encoders.encoder import Encoder
 from modules.encoders.layer import StackedEncoder
@@ -26,9 +27,14 @@ def hidden_size() -> int:
 
 
 @pytest.fixture
-def settings(hidden_size: int) -> BertSettings:
+def vocab_size() -> int:
+    return 100
+
+
+@pytest.fixture
+def settings(hidden_size: int, vocab_size: int) -> BertSettings:
     return BertSettings(
-        vocab_size=100,
+        vocab_size=vocab_size,
         hidden_size=hidden_size,
         max_position_embeddings=512,
         type_vocab_size=2,
@@ -99,5 +105,10 @@ def pooler(hidden_size: int) -> Pooler:
 
 
 @pytest.fixture
-def bert(settings: BertSettings) -> Bert:
-    return Bert(settings=settings)
+def bert_backbone(settings: BertSettings) -> BertBackbone:
+    return BertBackbone(settings=settings)
+
+
+@pytest.fixture
+def mlm_bert(settings: BertSettings) -> MaskedLanguageModellingBert:
+    return MaskedLanguageModellingBert(settings=settings)

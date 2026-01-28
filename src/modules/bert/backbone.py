@@ -7,9 +7,10 @@ from modules.pooler import Pooler
 from settings import BertSettings
 
 
-class Bert(nn.Module):
+class BertBackbone(nn.Module):
     def __init__(self, settings: BertSettings):
         super().__init__()
+        self.settings = settings
         self.embeddings = Embeddings(settings)
         self.encoder = StackedEncoder(settings)
         self.pooler = Pooler(settings.hidden_size)
