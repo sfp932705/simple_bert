@@ -1,11 +1,26 @@
-from pydantic import Field
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class TokenizerSettings(BaseSettings):
     vocab_size: int = 30522
-    special_tokens: list[str] = ["[PAD]", "[MASK]", "[CLS]", "[SEP]", "[UNK]"]
+    pad_token: str = "[PAD]"
+    mask_token: str = "[MASK]"
+    cls_token: str = "[CLS]"
+    sep_token: str = "[SEP]"
+    unk_token: str = "[UNK]"
     unused_tokens: int = 100
+
+    @computed_field
+    @property
+    def special_tokens(self) -> list[str]:
+        return [
+            self.pad_token,
+            self.mask_token,
+            self.cls_token,
+            self.sep_token,
+            self.unk_token,
+        ]
 
 
 class BertSettings(BaseSettings):
@@ -22,14 +37,35 @@ class BertSettings(BaseSettings):
     hidden_act: str = "gelu"
 
 
+class LoaderSettings(BaseSettings):
+    batch_size: int = 32
+    num_workers: int = 4
+    shuffle: bool = True
+    pin_memory: bool = True
+    drop_last: bool = False
+    max_seq_len: int = 512
+
+
 class Settings(BaseSettings):
     bert: BertSettings = Field(default_factory=BertSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
+    loader: LoaderSettings = Field(default_factory=LoaderSettings)
     model_config = SettingsConfigDict(
         env_file=".env",
         env_nested_delimiter="__",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def check_sequence_length(self):
+        phys_limit = self.bert.max_position_embeddings
+        data_limit = self.loader.max_seq_len
+        if data_limit > phys_limit:
+            raise ValueError(
+                f"Data loader max_seq_len ({data_limit}) cannot be larger than "
+                f"Model max_position_embeddings ({phys_limit})."
+            )
+        return self
 
 
 SETTINGS = Settings()

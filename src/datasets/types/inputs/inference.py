@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Iterator, Self
 
-from datasets.types.base import BaseData
+from datasets.types.inputs.base import BaseData
 
 
 @dataclass
