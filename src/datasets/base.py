@@ -31,23 +31,24 @@ class BaseDataset(Dataset, Generic[T_Tokenizer, T_Data, T_DataItem]):
         raise NotImplementedError
 
     def loader(self, override_settings: LoaderSettings | None = None) -> DataLoader:
-        config = override_settings or self.settings
-        if not config:
+        self.settings = override_settings or self.settings
+        if not self.settings:
             raise ValueError(
                 "No loader settings found. Specify them during init, or here "
             )
         return DataLoader(
             self,
-            batch_size=config.batch_size,
-            shuffle=config.shuffle,
-            num_workers=config.num_workers,
-            pin_memory=config.pin_memory,
-            drop_last=config.drop_last,
+            batch_size=self.settings.batch_size,
+            shuffle=self.settings.shuffle,
+            num_workers=self.settings.num_workers,
+            pin_memory=self.settings.pin_memory,
+            drop_last=self.settings.drop_last,
         )
 
     def pad_and_tensorize(
         self, input_ids: list[int], padding_value: int = 0
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        assert self.settings is not None
         max_len = self.settings.max_seq_len
         if len(input_ids) > max_len:
             input_ids = input_ids[:max_len]

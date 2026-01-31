@@ -7,7 +7,7 @@ from settings import LoaderSettings
 from token_encoders.bpe import BPETokenizer
 
 
-class MockedBaseDataset(BaseDataset[BPETokenizer, list[int], dict]):
+class MockedBaseDataset(BaseDataset[BPETokenizer, list[int], dict]):  # type: ignore
 
     def __getitem__(self, index) -> dict:
         return {"value": self.data[index]}
@@ -59,9 +59,11 @@ def test_base_dataset_loader_override(dataset: MockedBaseDataset):
         drop_last=True,
     )
 
+    assert dataset.settings is not None
+    assert dataset.settings.batch_size != 99
     dl = dataset.loader(override_settings=new_settings)
     assert dl.batch_size == 99
-    assert dataset.settings.batch_size != 99
+    assert dataset.settings.batch_size == 99
 
 
 def test_base_dataset_loader_error(
@@ -101,6 +103,6 @@ def test_pad_and_tensorize(
 def test_getitem_abstract_enforcement(
     sample_data: list[int], tokenizer: BPETokenizer, settings: LoaderSettings
 ):
-    ds = BaseDataset(sample_data, tokenizer, settings)
+    ds = BaseDataset(sample_data, tokenizer, settings)  # type: ignore
     with pytest.raises(NotImplementedError):
         _ = ds[0]

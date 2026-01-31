@@ -56,15 +56,6 @@ def test_get_next_sentence_cases(
     assert label == expected_label
 
 
-def test_truncate_pair_logic(dataset: PretrainingDataset, settings: LoaderSettings):
-    tokens_a = [1] * 8
-    tokens_b = [2] * 4
-    dataset._truncate_pair(tokens_a, tokens_b)
-    assert len(tokens_a) + len(tokens_b) <= settings.max_seq_len - 3
-    assert len(tokens_a) == 5
-    assert len(tokens_b) == 4
-
-
 @pytest.mark.parametrize(
     "len_a, len_b, expected_a, expected_b", [(8, 4, 5, 4), (4, 8, 4, 5)]
 )

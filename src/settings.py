@@ -11,7 +11,7 @@ class TokenizerSettings(BaseSettings):
     unk_token: str = "[UNK]"
     unused_tokens: int = 100
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def special_tokens(self) -> list[str]:
         return [

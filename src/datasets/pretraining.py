@@ -21,7 +21,7 @@ class PretrainingDataset(
         self,
         data: PretrainingCorpusData,
         tokenizer: T_Tokenizer,
-        loader_settings: LoaderSettings = None,
+        loader_settings: LoaderSettings | None = None,
     ):
         super().__init__(data, tokenizer, loader_settings)
         self.samples_index = []
@@ -54,6 +54,7 @@ class PretrainingDataset(
             input_ids, self.tokenizer.pad_token_id
         )
 
+        assert self.settings is not None
         padding_len = self.settings.max_seq_len - len(input_ids)
         if padding_len > 0:
             token_type_ids = token_type_ids + [0] * padding_len
@@ -85,6 +86,7 @@ class PretrainingDataset(
         return second_sentence, label
 
     def _truncate_pair(self, tokens_a, tokens_b):
+        assert self.settings is not None
         while True:
             if len(tokens_a) + len(tokens_b) <= self.settings.max_seq_len - 3:
                 break

@@ -35,5 +35,5 @@ def tokenizer() -> BPETokenizer:
             return []
         return [hash(w) % (settings.vocab_size - 5) + 5 for w in text.split()]
 
-    tokenizer.encode = simple_encode
+    tokenizer.encode = simple_encode  # type: ignore
     return tokenizer
