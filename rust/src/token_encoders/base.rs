@@ -1,3 +1,4 @@
+use pyo3::prelude::*;
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -50,6 +51,11 @@ pub struct BaseTokenizer {
     pub inverse_vocab: FxHashMap<u32, String>,
     pub vocab_size: usize,
     pub special_tokens: Vec<String>,
+    pub pad_token_id: u32,
+    pub mask_token_id: u32,
+    pub cls_token_id: u32,
+    pub sep_token_id: u32,
+    pub unk_token_id: u32,
 }
 
 impl BaseTokenizer {
@@ -63,7 +69,34 @@ impl BaseTokenizer {
             inverse_vocab: FxHashMap::default(),
             vocab_size,
             special_tokens,
+            pad_token_id: 0,
+            mask_token_id: 0,
+            cls_token_id: 0,
+            sep_token_id: 0,
+            unk_token_id: 0,
         }
+    }
+
+    pub fn update_special_tokens(&mut self, settings: &Bound<'_, PyAny>) {
+        let get_setting = |name: &str| -> String {
+            settings
+                .getattr(name)
+                .expect(&format!("Settings object is missing attribute '{}'", name))
+                .extract()
+                .expect(&format!("Attribute '{}' must be a string", name))
+        };
+
+        let pad_token = get_setting("pad_token");
+        let mask_token = get_setting("mask_token");
+        let cls_token = get_setting("cls_token");
+        let sep_token = get_setting("sep_token");
+        let unk_token = get_setting("unk_token");
+
+        self.pad_token_id = *self.vocab.get(&pad_token).unwrap_or(&0);
+        self.mask_token_id = *self.vocab.get(&mask_token).unwrap_or(&0);
+        self.cls_token_id = *self.vocab.get(&cls_token).unwrap_or(&0);
+        self.sep_token_id = *self.vocab.get(&sep_token).unwrap_or(&0);
+        self.unk_token_id = *self.vocab.get(&unk_token).unwrap_or(&0);
     }
 
     pub fn initialize_vocab(&mut self, sorted_alphabet: Vec<String>) {

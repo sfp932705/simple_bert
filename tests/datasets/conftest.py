@@ -28,7 +28,7 @@ def tokenizer() -> BPETokenizer:
         settings.unk_token: 4,
     }
 
-    tokenizer._update_id_cache()
+    tokenizer._update_special_tokens()
 
     def simple_encode(text: str):
         if not text:

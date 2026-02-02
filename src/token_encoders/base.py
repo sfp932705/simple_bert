@@ -15,7 +15,7 @@ class BaseTokenizer(ABC):
         self._sep_id: int = -1
         self._unk_id: int = -1
 
-    def _update_id_cache(self) -> None:
+    def _update_special_tokens(self) -> None:
         self._pad_id = self.vocab[self.settings.pad_token]
         self._mask_id = self.vocab[self.settings.mask_token]
         self._cls_id = self.vocab[self.settings.cls_token]
@@ -31,7 +31,7 @@ class BaseTokenizer(ABC):
             if char not in self.vocab:
                 self.vocab[char] = len(self.vocab)
         self.inverse_vocab = {v: k for k, v in self.vocab.items()}
-        self._update_id_cache()
+        self._update_special_tokens()
 
     def save(self, directory: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
@@ -46,7 +46,7 @@ class BaseTokenizer(ABC):
         lines = vocab_path.read_text(encoding="utf-8").splitlines()
         self.vocab = {token: i for i, token in enumerate(lines)}
         self.inverse_vocab = {i: token for i, token in enumerate(lines)}
-        self._update_id_cache()
+        self._update_special_tokens()
 
     @abstractmethod
     def train(self, corpus: list[str]) -> None:
