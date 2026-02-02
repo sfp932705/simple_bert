@@ -210,6 +210,9 @@ impl RustWordPieceTokenizer {
         self.build_index();
     }
 
+    pub fn update_special_tokens(&mut self, settings: &Bound<'_, PyAny>) {
+        self.bpe.update_special_tokens(settings);
+    }
     pub fn set_state(&mut self, vocab: FxHashMap<String, u32>, merges: Vec<(String, String)>) {
         self.bpe.set_state(vocab, merges)
     }

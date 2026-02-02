@@ -10,7 +10,7 @@ from token_encoders.wp import WordPieceTokenizer
 class RustWordPieceTokenizer(RustBaseTokenizer, WordPieceTokenizer):
     @property
     def backend_tokenizer(self) -> Any:
-        return rust.token_encoders.RustWordPieceTokenizer  # type:ignore
+        return rust.token_encoders.RustWordPieceTokenizer  # type: ignore
 
     @property
     def tokenizer_delimiter(self) -> str:
@@ -23,3 +23,4 @@ class RustWordPieceTokenizer(RustBaseTokenizer, WordPieceTokenizer):
     def load(self, directory: Path) -> None:
         WordPieceTokenizer.load(self, directory)
         self._backend.set_state(self.vocab, self.merges)
+        self._update_special_tokens()

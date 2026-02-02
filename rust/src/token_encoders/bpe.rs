@@ -309,6 +309,11 @@ impl RustBPETokenizer {
         self.base.inverse_vocab = vocab.into_iter().map(|(token, id)| (id, token)).collect();
         self.base.vocab_size = self.base.vocab.len();
     }
+
+    pub fn update_special_tokens(&mut self, settings: &Bound<'_, PyAny>) {
+        self.base.update_special_tokens(settings);
+    }
+
     pub fn encode(&self, text: String) -> Vec<u32> {
         if text.is_empty() {
             return Vec::new();

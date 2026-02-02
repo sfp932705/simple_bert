@@ -27,3 +27,4 @@ class RustBPETokenizer(RustBaseTokenizer, BPETokenizer):
     def load(self, directory: Path) -> None:
         BPETokenizer.load(self, directory)
         self._backend.set_state(self.vocab, self.merges)
+        self._update_special_tokens()

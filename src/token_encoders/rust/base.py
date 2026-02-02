@@ -9,7 +9,7 @@ from token_encoders.base import BaseTokenizer
 class RustBaseTokenizer(BaseTokenizer):
     def __init__(self, settings: TokenizerSettings):
         super().__init__(settings)
-        self._backend = self.get_backend()  # type:ignore
+        self._backend = self.get_backend()  # type: ignore
 
     @abstractmethod
     def load(self, directory: Path) -> None:
@@ -30,6 +30,9 @@ class RustBaseTokenizer(BaseTokenizer):
     def wordpiece_mode(self) -> bool:
         pass
 
+    def _update_special_tokens(self) -> None:
+        self._backend.update_special_tokens(self.settings)
+
     def get_backend(self) -> Any:
         return self.backend_tokenizer(
             self.settings.vocab_size,
@@ -41,12 +44,12 @@ class RustBaseTokenizer(BaseTokenizer):
 
     def train(self, corpus: list[str]) -> None:
         self._backend.train("".join(corpus))
+        self._update_special_tokens()
         self.vocab = self._backend.get_vocab()
         self.inverse_vocab = {v: k for k, v in self.vocab.items()}
+        super()._update_special_tokens()
 
     def encode(self, text: str) -> list[int]:
-        ids = self._backend.encode(text)
-        print(ids)
         return self._backend.encode(text)
 
     def decode(self, ids: list[int]) -> str:
