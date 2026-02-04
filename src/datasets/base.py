@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar
 
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, default_collate
 
 from datasets.types.inputs.base import BaseData
 from datasets.types.outputs.base import BaseOutput
@@ -11,6 +11,12 @@ from token_encoders.base import BaseTokenizer
 T_Tokenizer = TypeVar("T_Tokenizer", bound=BaseTokenizer)
 T_Data = TypeVar("T_Data", bound=BaseData)
 T_DataItem = TypeVar("T_DataItem", bound=BaseOutput)
+
+
+def dataclass_collate(batch: list[T_DataItem]) -> T_DataItem:
+    assert len(batch) > 0
+    elem = batch[0]
+    return type(elem)(**default_collate([d.__dict__ for d in batch]))
 
 
 class BaseDataset(Dataset, Generic[T_Tokenizer, T_Data, T_DataItem]):
@@ -43,6 +49,7 @@ class BaseDataset(Dataset, Generic[T_Tokenizer, T_Data, T_DataItem]):
             num_workers=self.settings.num_workers,
             pin_memory=self.settings.pin_memory,
             drop_last=self.settings.drop_last,
+            collate_fn=dataclass_collate,
         )
 
     def pad_and_tensorize(

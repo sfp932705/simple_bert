@@ -1,26 +1,56 @@
+from dataclasses import dataclass
+
 import pytest
 import torch
 from torch.utils.data import DataLoader
 
 from datasets.base import BaseDataset
+from datasets.types.inputs.base import BaseData
+from datasets.types.outputs.base import BaseOutput
 from settings import LoaderSettings
 from token_encoders.bpe import BPETokenizer
 
 
-class MockedBaseDataset(BaseDataset[BPETokenizer, list[int], dict]):  # type: ignore
+@dataclass
+class MockedOutput(BaseOutput):
+    value: int
 
-    def __getitem__(self, index) -> dict:
-        return {"value": self.data[index]}
+
+@dataclass
+class MockedInput(BaseData):
+    def __init__(self, data: list[int]):
+        self.data = data
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
+    def __iter__(self):
+        return self.data.__iter__()
+
+
+class MockedBaseDataset(BaseDataset[BPETokenizer, MockedInput, MockedOutput]):
+
+    def __getitem__(self, index) -> MockedOutput:
+        ones = torch.ones(1)
+        return MockedOutput(
+            value=self.data[index],
+            input_ids=ones,
+            attention_mask=ones,
+            token_type_ids=ones,
+        )
 
 
 @pytest.fixture
-def sample_data() -> list[int]:
-    return [1, 2, 3, 4, 5]
+def sample_data() -> MockedInput:
+    return MockedInput([1, 2, 3, 4, 5])
 
 
 @pytest.fixture
 def dataset(
-    sample_data: list[int],
+    sample_data: MockedInput,
     tokenizer: BPETokenizer,
     settings: LoaderSettings,
 ) -> MockedBaseDataset:
@@ -29,7 +59,7 @@ def dataset(
 
 def test_base_dataset_initialization(
     dataset: MockedBaseDataset,
-    sample_data: list[int],
+    sample_data: MockedInput,
     tokenizer: BPETokenizer,
     settings: LoaderSettings,
 ):
@@ -67,7 +97,7 @@ def test_base_dataset_loader_override(dataset: MockedBaseDataset):
 
 
 def test_base_dataset_loader_error(
-    sample_data: list[int],
+    sample_data: MockedInput,
     tokenizer: BPETokenizer,
 ):
     ds = MockedBaseDataset(sample_data, tokenizer, loader_settings=None)
@@ -101,8 +131,18 @@ def test_pad_and_tensorize(
 
 
 def test_getitem_abstract_enforcement(
-    sample_data: list[int], tokenizer: BPETokenizer, settings: LoaderSettings
+    sample_data: MockedInput, tokenizer: BPETokenizer, settings: LoaderSettings
 ):
     ds = BaseDataset(sample_data, tokenizer, settings)  # type: ignore
     with pytest.raises(NotImplementedError):
         _ = ds[0]
+
+
+def test_loader_returns_batched_dataclass(
+    dataset: MockedBaseDataset, settings: LoaderSettings
+):
+    dl = dataset.loader()
+    batch = next(iter(dl))
+    assert not isinstance(batch, list)
+    assert isinstance(batch, MockedOutput)
+    assert batch.input_ids.shape[0] == settings.batch_size

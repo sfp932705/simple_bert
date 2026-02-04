@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import torch
 from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -46,10 +49,22 @@ class LoaderSettings(BaseSettings):
     max_seq_len: int = 512
 
 
+class TrainerSettings(BaseSettings):
+    learning_rate: float = 1e-5
+    weight_decay: float = 0.01
+    adam_epsilon: float = 1e-6
+    num_train_epochs: int = 40
+    warmup_steps: int = 10000
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    checkpoint_dir: Path = Path("checkpoints")
+    log_interval: int = 10
+
+
 class Settings(BaseSettings):
     bert: BertSettings = Field(default_factory=BertSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
     loader: LoaderSettings = Field(default_factory=LoaderSettings)
+    trainer: TrainerSettings = Field(default_factory=TrainerSettings)
     model_config = SettingsConfigDict(
         env_file=".env",
         env_nested_delimiter="__",

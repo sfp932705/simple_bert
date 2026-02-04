@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterator, Self
 
 from datasets.types.inputs.base import BaseData
@@ -9,12 +10,17 @@ class PretrainingCorpusData(BaseData):
     documents: list[list[str]]
 
     @classmethod
-    def from_file(cls, path: str, sentence_separator: str = "|||") -> Self:
+    def from_file(
+        cls, path: Path, doc_separator: str = "<|||ITEM-SEPARATOR|||>"
+    ) -> Self:
+        content = path.read_text(encoding="utf-8")
+        raw_documents = content.split(doc_separator)
+
         documents = []
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    documents.append(line.strip().split(sentence_separator))
+        for raw_doc in raw_documents:
+            parragraphs = [line.strip() for line in raw_doc.split("\n") if line.strip()]
+            if parragraphs:
+                documents.append(parragraphs)
         return cls(documents=documents)
 
     def __len__(self) -> int:
