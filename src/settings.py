@@ -49,22 +49,32 @@ class LoaderSettings(BaseSettings):
     max_seq_len: int = 512
 
 
-class TrainerSettings(BaseSettings):
+class TrainingSettings(BaseSettings):
     learning_rate: float = 1e-5
     weight_decay: float = 0.01
     adam_epsilon: float = 1e-6
-    num_train_epochs: int = 40
     warmup_steps: int = 10000
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     checkpoint_dir: Path = Path("checkpoints")
-    log_interval: int = 10
+
+
+class PreTrainingSettings(TrainingSettings):
+    total_steps: int = 1000000
+    save_interval_steps: int = 10000
+    log_interval_steps: int = 100
+
+
+class FinetuningSettings(TrainingSettings):
+    num_train_epochs: int = 40
+    save_interval_epochs: int = 5
 
 
 class Settings(BaseSettings):
     bert: BertSettings = Field(default_factory=BertSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
     loader: LoaderSettings = Field(default_factory=LoaderSettings)
-    trainer: TrainerSettings = Field(default_factory=TrainerSettings)
+    pretrainer: PreTrainingSettings = Field(default_factory=PreTrainingSettings)
+    finetuner: FinetuningSettings = Field(default_factory=FinetuningSettings)
     model_config = SettingsConfigDict(
         env_file=".env",
         env_nested_delimiter="__",

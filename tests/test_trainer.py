@@ -7,7 +7,7 @@ import torch
 
 from datasets.types.outputs.base import BaseOutput
 from modules.trainable import TrainableModel
-from settings import TrainerSettings
+from settings import TrainingSettings
 from trainer import Trainer
 
 
@@ -33,8 +33,8 @@ class MockModel(TrainableModel):
 
 
 @pytest.fixture
-def trainer_settings(tmp_path: Path) -> TrainerSettings:
-    return TrainerSettings(
+def trainer_settings(tmp_path: Path) -> TrainingSettings:
+    return TrainingSettings(
         num_train_epochs=2,
         checkpoint_dir=tmp_path / "checkpoints",
         log_interval=1,
@@ -61,7 +61,7 @@ def trainable_model() -> MockModel:
 def test_trainer_initialization(
     trainable_model: MockModel,
     mock_loader: list[MockedOutput],
-    trainer_settings: TrainerSettings,
+    trainer_settings: TrainingSettings,
 ) -> None:
     trainer = Trainer(trainable_model, mock_loader, trainer_settings)  # type: ignore
     assert trainer.model == trainable_model
@@ -72,7 +72,7 @@ def test_trainer_initialization(
 def test_trainer_runs_epochs(
     trainable_model: MockModel,
     mock_loader: list[MockedOutput],
-    trainer_settings: TrainerSettings,
+    trainer_settings: TrainingSettings,
 ) -> None:
     optimizer = torch.optim.SGD(trainable_model.parameters(), lr=0.1)
     optimizer.step = MagicMock(wraps=optimizer.step)  # type: ignore
@@ -90,7 +90,7 @@ def test_trainer_runs_epochs(
 def test_trainer_moves_batch_to_device(
     trainable_model: MockModel,
     mock_loader: list[MockedOutput],
-    trainer_settings: TrainerSettings,
+    trainer_settings: TrainingSettings,
 ) -> None:
     mock_batch = mock_loader[0]
     mock_batch.to = MagicMock(return_value=mock_batch)  # type: ignore
@@ -103,7 +103,7 @@ def test_trainer_moves_batch_to_device(
 def test_trainer_saves_state_dict(
     trainable_model: MockModel,
     mock_loader: list[MockedOutput],
-    trainer_settings: TrainerSettings,
+    trainer_settings: TrainingSettings,
 ) -> None:
     trainer = Trainer(trainable_model, mock_loader, trainer_settings)  # type: ignore
     trainer.train()
