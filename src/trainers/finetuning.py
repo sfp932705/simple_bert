@@ -25,7 +25,6 @@ class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSet
                 self.tracker.log_metrics(
                     {"Val/Accuracy": val_acc, "Val/Loss": val_loss}
                 )
-
                 self._handle_checkpoint(epoch, val_acc, val_loss)
         self.tracker.close()
 
@@ -39,6 +38,7 @@ class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSet
         self.tracker.log_metric("Train/Loss", running_loss / len(self.train_loader))
 
     def evaluate(self) -> tuple[float, float]:
+        assert self.val_loader
         self.model.eval()
         total_correct = 0
         total_samples = 0

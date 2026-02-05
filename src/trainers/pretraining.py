@@ -33,7 +33,8 @@ class PreTrainer(BaseTrainer[BertForPreTraining, PreTrainingSettings]):
                 self.tracker.log_metric("Pretraining/Loss", avg_loss, step=step)
                 self.tracker.log_metric("Pretraining/LR", current_lr, step=step)
                 running_loss = 0.0
-            if (step + 1) % self.settings.save_interval_steps == 0:
+            last_step = (step + 1) == self.total_steps
+            if (step + 1) % self.settings.save_interval_steps == 0 or last_step:
                 self._handle_checkpoint(step, loss_val)
         self.tracker.close()
 

@@ -31,7 +31,7 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
         self.settings = settings
         self.tracker = tracker
         self.best_loss = float("inf")
-        self.best_accuracy = 0.0
+        self.best_accuracy = float("-inf")
         self.device = torch.device(self.settings.device)
         self.model = model.to(self.device)
         self.train_loader = train_loader

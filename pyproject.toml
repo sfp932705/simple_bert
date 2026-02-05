@@ -57,7 +57,7 @@ exclude_also = [
 
 
 [[tool.mypy.overrides]]
-module = ["rust.*"]
+module = ["rust.*", "tqdm"]
 ignore_missing_imports = true
 
 [tool.ruff]
