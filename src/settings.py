@@ -55,7 +55,6 @@ class TrainingSettings(BaseSettings):
     adam_epsilon: float = 1e-6
     warmup_steps: int = 10000
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-    checkpoint_dir: Path = Path("checkpoints")
 
 
 class PreTrainingSettings(TrainingSettings):
@@ -69,12 +68,18 @@ class FinetuningSettings(TrainingSettings):
     save_interval_epochs: int = 5
 
 
+class TrackerSettings(BaseSettings):
+    run_name: str = "exp"
+    runs_dir: Path = Path("runs")
+
+
 class Settings(BaseSettings):
     bert: BertSettings = Field(default_factory=BertSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
     loader: LoaderSettings = Field(default_factory=LoaderSettings)
     pretrainer: PreTrainingSettings = Field(default_factory=PreTrainingSettings)
     finetuner: FinetuningSettings = Field(default_factory=FinetuningSettings)
+    tracker: TrackerSettings = Field(default_factory=TrackerSettings)
     model_config = SettingsConfigDict(
         env_file=".env",
         env_nested_delimiter="__",

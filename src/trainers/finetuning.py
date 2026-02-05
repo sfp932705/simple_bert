@@ -7,30 +7,36 @@ from trainers.base import BaseTrainer
 
 
 class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSettings]):
-
     @property
     def total_steps(self) -> int:
-        return self.settings.num_train_epochs
-
-    def set_progress_bar(self, desc: str | None = None) -> tqdm:
-        if desc is None:
-            desc = ""
-        return tqdm(range(self.train_loader), desc=f"Finetuning epoch {desc}")  # type: ignore
+        return self.settings.num_train_epochs * len(self.train_loader)
 
     def train(self):
         self.model.train()
+
         for epoch in range(self.settings.num_train_epochs):
-            self.set_progress_bar(str(epoch + 1))
+            self.tracker.start_progress(
+                total_steps=len(self.train_loader),
+                desc=f"Epoch {epoch + 1}/{self.settings.num_train_epochs}",
+            )
             self._run_train_epoch()
             if self.val_loader:
                 val_acc, val_loss = self.evaluate()
+                self.tracker.log_metrics(
+                    {"Val/Accuracy": val_acc, "Val/Loss": val_loss}
+                )
+
                 self._handle_checkpoint(epoch, val_acc, val_loss)
+        self.tracker.close()
 
     def _run_train_epoch(self):
         self.model.train()
-        for i, batch in enumerate(self.progress_bar):
-            loss_val = self._training_step(batch)  # type: ignore
-            self._log_progress(loss_val, 1)
+        running_loss = 0.0
+        for i, batch in enumerate(self.train_loader):
+            loss_val = self._training_step(batch)
+            running_loss += loss_val
+            self.tracker.update_progress(step_increment=1, postfix={"loss": loss_val})
+        self.tracker.log_metric("Train/Loss", running_loss / len(self.train_loader))
 
     def evaluate(self) -> tuple[float, float]:
         self.model.eval()
@@ -51,9 +57,8 @@ class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSet
                 preds = torch.argmax(logits, dim=-1)
                 total_correct += (preds == batch.labels).sum().item()
                 total_samples += batch.labels.size(0)
-
         accuracy = total_correct / total_samples
-        avg_loss = total_loss / len(self.val_loader)  # type: ignore
+        avg_loss = total_loss / len(self.val_loader)
         return accuracy, avg_loss
 
     def _handle_checkpoint(self, epoch: int, accuracy: float, loss: float):
