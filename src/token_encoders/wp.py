@@ -99,7 +99,7 @@ class WordPieceTokenizer(BPETokenizer):
         super().load(directory)
         self._build_index()
 
-    def encode(self, text: str) -> list[int]:
+    def _encode_text(self, text: str) -> list[int]:
         if not self.trie_root.children:
             self._build_index()
 
@@ -113,7 +113,7 @@ class WordPieceTokenizer(BPETokenizer):
                 if char in continuing_root.children:
                     continuing_root = continuing_root.children[char]
                 else:
-                    continuing_root = None  # type:ignore
+                    continuing_root = None  # type: ignore
                     break
 
         for word in words:

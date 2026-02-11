@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -14,6 +15,7 @@ class BaseTokenizer(ABC):
         self._cls_id: int = -1
         self._sep_id: int = -1
         self._unk_id: int = -1
+        self.special_token_pattern: re.Pattern | None = None
 
     def _update_special_tokens(self) -> None:
         self._pad_id = self.vocab[self.settings.pad_token]
@@ -21,6 +23,16 @@ class BaseTokenizer(ABC):
         self._cls_id = self.vocab[self.settings.cls_token]
         self._sep_id = self.vocab[self.settings.sep_token]
         self._unk_id = self.vocab[self.settings.unk_token]
+
+        all_specials = [
+            t for t in self.vocab.keys() if t in self.settings.special_tokens
+        ]
+        if not all_specials:
+            return
+        all_specials.sort(key=len, reverse=True)
+        self.special_token_pattern = re.compile(
+            r"(" + "|".join(map(re.escape, all_specials)) + r")"
+        )
 
     def _initialize_vocab(self, base_alphabet: list[str]) -> None:
         for idx, token in enumerate(self.settings.special_tokens):
@@ -48,12 +60,27 @@ class BaseTokenizer(ABC):
         self.inverse_vocab = {i: token for i, token in enumerate(lines)}
         self._update_special_tokens()
 
+    def encode(self, text: str) -> list[int]:
+        if not self.special_token_pattern:
+            return self._encode_text(text)
+
+        parts = self.special_token_pattern.split(text)
+        encoded_ids = []
+        for part in parts:
+            if not part:
+                continue
+            if part in self.vocab:
+                encoded_ids.append(self.vocab[part])
+            elif part.strip():
+                encoded_ids.extend(self._encode_text(part))
+        return encoded_ids
+
     @abstractmethod
     def train(self, corpus: list[str]) -> None:
         pass
 
     @abstractmethod
-    def encode(self, text: str) -> list[int]:
+    def _encode_text(self, text: str) -> list[int]:
         pass
 
     @abstractmethod

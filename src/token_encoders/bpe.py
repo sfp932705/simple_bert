@@ -114,7 +114,7 @@ class BPETokenizer(BaseTokenizer):
             del stats[best_pair]
             del inverted_index[best_pair]
 
-    def encode(self, text: str) -> list[int]:
+    def _encode_text(self, text: str) -> list[int]:
         if not text:
             return []
         words = self.split_pattern.findall(text)

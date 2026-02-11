@@ -47,6 +47,7 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
             num_warmup_steps=self.settings.warmup_steps,
             num_training_steps=self.total_steps,
         )
+        self.model.to(self.device)
 
     @property
     @abstractmethod

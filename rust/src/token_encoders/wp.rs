@@ -216,72 +216,90 @@ impl RustWordPieceTokenizer {
     pub fn set_state(&mut self, vocab: FxHashMap<String, u32>, merges: Vec<(String, String)>) {
         self.bpe.set_state(vocab, merges)
     }
+
     pub fn encode(&mut self, text: String) -> Vec<u32> {
         if self.trie_root.children.is_empty() && !self.bpe.get_vocab().is_empty() {
             self.build_index();
         }
-        let words = self.pre_tokenize_text(&text);
+
+        let parts = self.bpe.base.split_by_special_tokens(&text);
         let mut output_ids = Vec::new();
         let unk_id = *self.bpe.base.vocab.get(&self.unk_token).unwrap_or(&0);
 
-        for word in words {
-            let chars: Vec<char> = word.chars().collect();
-            let n = chars.len();
-            let mut i = 0;
-            let mut is_bad = false;
-            let mut word_ids = Vec::new();
+        for (is_special, part) in parts {
+            if is_special {
+                if let Some(id) = self.bpe.base.vocab.get(part) {
+                    output_ids.push(*id);
+                } else {
+                    output_ids.push(unk_id);
+                }
+                continue;
+            }
 
-            while i < n {
-                let mut node = &self.trie_root;
+            if part.trim().is_empty() {
+                continue;
+            }
 
-                if i > 0 {
-                    for delimiter_char in self.delimiter.chars() {
-                        if let Some(next_node) = node.children.get(&delimiter_char) {
-                            node = next_node;
-                        } else {
-                            is_bad = true;
+            let words = self.pre_tokenize_text(part);
+
+            for word in words {
+                let chars: Vec<char> = word.chars().collect();
+                let n = chars.len();
+                let mut i = 0;
+                let mut is_bad = false;
+                let mut word_ids = Vec::new();
+
+                while i < n {
+                    let mut node = &self.trie_root;
+
+                    if i > 0 {
+                        for delimiter_char in self.delimiter.chars() {
+                            if let Some(next_node) = node.children.get(&delimiter_char) {
+                                node = next_node;
+                            } else {
+                                is_bad = true;
+                                break;
+                            }
+                        }
+                        if is_bad {
                             break;
                         }
                     }
-                    if is_bad {
-                        break;
-                    }
-                }
 
-                let mut j = i;
-                let mut last_token_id = None;
-                let mut last_match_end = 0;
+                    let mut j = i;
+                    let mut last_token_id = None;
+                    let mut last_match_end = 0;
 
-                while j < n {
-                    let c = chars[j];
-                    if let Some(next_node) = node.children.get(&c) {
-                        node = next_node;
-                        if node.token_id.is_some() {
-                            last_token_id = node.token_id;
-                            last_match_end = j;
+                    while j < n {
+                        let c = chars[j];
+                        if let Some(next_node) = node.children.get(&c) {
+                            node = next_node;
+                            if node.token_id.is_some() {
+                                last_token_id = node.token_id;
+                                last_match_end = j;
+                            }
+                            j += 1;
+                        } else {
+                            break;
                         }
-                        j += 1;
+                    }
+
+                    if let Some(id) = last_token_id {
+                        word_ids.push(id);
+                        i = last_match_end + 1;
                     } else {
+                        is_bad = true;
                         break;
                     }
                 }
 
-                if let Some(id) = last_token_id {
-                    word_ids.push(id);
-                    i = last_match_end + 1;
+                if is_bad {
+                    output_ids.push(unk_id);
                 } else {
-                    is_bad = true;
-                    break;
+                    output_ids.extend(word_ids);
                 }
-            }
-
-            if is_bad {
-                output_ids.push(unk_id);
-            } else {
-                output_ids.extend(word_ids);
             }
         }
-
         output_ids
     }
 
