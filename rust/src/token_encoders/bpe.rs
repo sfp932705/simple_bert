@@ -318,43 +318,63 @@ impl RustBPETokenizer {
         if text.is_empty() {
             return Vec::new();
         }
-        let words: Vec<&str> = text.split(' ').collect();
-        if words.is_empty() {
-            return Vec::new();
-        }
-        let mut encoded_ids = Vec::new();
-        let mut word_list: Vec<Vec<u32>> = words
-            .iter()
-            .map(|w| {
-                let chars = self.model.token_to_chars(w, &self.delimiter);
-                chars.iter().map(|c| self.base.get_id(c)).collect()
-            })
-            .collect();
 
-        for (p_left, p_right) in &self.merges {
-            let left_id = self.base.get_id(p_left);
-            let right_id = self.base.get_id(p_right);
-            let new_token_str = self.model.merge_strings(p_left, p_right, &self.delimiter);
-            let new_id = self.base.get_id(&new_token_str);
-            for symbols in &mut word_list {
-                if symbols.len() < 2 {
-                    continue;
+        let parts = self.base.split_by_special_tokens(&text);
+        let mut final_encoded_ids = Vec::new();
+
+        for (is_special, part) in parts {
+            if is_special {
+                if let Some(id) = self.base.vocab.get(part) {
+                    final_encoded_ids.push(*id);
+                } else {
+                    final_encoded_ids.push(self.base.unk_token_id);
                 }
-                let mut i = 0;
-                while i < symbols.len() - 1 {
-                    if symbols[i] == left_id && symbols[i + 1] == right_id {
-                        symbols[i] = new_id;
-                        symbols.remove(i + 1);
-                    } else {
-                        i += 1;
+                continue;
+            }
+
+            if part.trim().is_empty() {
+                continue;
+            }
+
+            let words: Vec<&str> = part.split(' ').collect();
+            if words.is_empty() {
+                continue;
+            }
+
+            let mut word_list: Vec<Vec<u32>> = words
+                .iter()
+                .filter(|w| !w.is_empty())
+                .map(|w| {
+                    let chars = self.model.token_to_chars(w, &self.delimiter);
+                    chars.iter().map(|c| self.base.get_id(c)).collect()
+                })
+                .collect();
+
+            for (p_left, p_right) in &self.merges {
+                let left_id = self.base.get_id(p_left);
+                let right_id = self.base.get_id(p_right);
+                let new_token_str = self.model.merge_strings(p_left, p_right, &self.delimiter);
+                let new_id = self.base.get_id(&new_token_str);
+                for symbols in &mut word_list {
+                    if symbols.len() < 2 {
+                        continue;
+                    }
+                    let mut i = 0;
+                    while i < symbols.len() - 1 {
+                        if symbols[i] == left_id && symbols[i + 1] == right_id {
+                            symbols[i] = new_id;
+                            symbols.remove(i + 1);
+                        } else {
+                            i += 1;
+                        }
                     }
                 }
             }
+            for symbols in word_list {
+                final_encoded_ids.extend(symbols);
+            }
         }
-        for symbols in word_list {
-            encoded_ids.extend(symbols);
-        }
-        encoded_ids
+        final_encoded_ids
     }
 
     pub fn decode(&self, ids: Vec<u32>) -> String {

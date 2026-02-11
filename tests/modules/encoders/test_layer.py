@@ -24,6 +24,7 @@ def test_stack_forward_shape(
 def test_gradient_propagation(
     encoder_layer: StackedEncoder, batch_size: int, seq_len: int, hidden_size: int
 ):
+    torch.manual_seed(0)
     encoder_layer.train()
     input_states = torch.randn(batch_size, seq_len, hidden_size, requires_grad=True)
     output = encoder_layer(input_states)
