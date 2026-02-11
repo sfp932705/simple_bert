@@ -14,6 +14,7 @@ format:
 
 install:
 	uv pip install .
+	maturin develop --release
 
 install-test: install
 	uv pip install .[test]
