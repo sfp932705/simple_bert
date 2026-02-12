@@ -6,7 +6,7 @@ from typing import Generic
 import torch
 from torch import nn
 
-from datasets.base import T_DataItem
+from data.base import T_DataItem
 
 
 class TrainableModel(ABC, nn.Module, Generic[T_DataItem]):

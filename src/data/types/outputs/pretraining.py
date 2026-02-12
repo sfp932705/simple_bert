@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import torch
 
-from datasets.types.outputs.base import BaseOutput
+from data.types.outputs.base import BaseOutput
 
 
 @dataclass

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, Self
 
-from datasets.types.inputs.base import BaseData
+from data.types.inputs.base import BaseData
 
 
 @dataclass

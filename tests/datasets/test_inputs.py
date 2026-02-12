@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from datasets.types.inputs.finetuning import FinetuningData
-from datasets.types.inputs.inference import InferenceData
-from datasets.types.inputs.pretraining import PretrainingCorpusData
+from data.types.inputs.finetuning import FinetuningData
+from data.types.inputs.inference import InferenceData
+from data.types.inputs.pretraining import PretrainingCorpusData
 
 
 def test_finetuning_input_data():

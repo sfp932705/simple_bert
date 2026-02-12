@@ -3,8 +3,8 @@ from typing import Generic, TypeVar
 import torch
 from torch.utils.data import DataLoader, Dataset, default_collate
 
-from datasets.types.inputs.base import BaseData
-from datasets.types.outputs.base import BaseOutput
+from data.types.inputs.base import BaseData
+from data.types.outputs.base import BaseOutput
 from settings import LoaderSettings
 from token_encoders.base import BaseTokenizer
 

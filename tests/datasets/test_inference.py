@@ -1,6 +1,6 @@
 import torch
-from datasets.inference import InferenceDataset
-from datasets.types.inputs.inference import InferenceData
+from data.inference import InferenceDataset
+from data.types.inputs.inference import InferenceData
 from settings import LoaderSettings
 from token_encoders.bpe import BPETokenizer
 

@@ -7,7 +7,7 @@ import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 
-from datasets.base import T_DataItem
+from data.base import T_DataItem
 from modules.trainable import TrainableModel
 from scheduler import BertScheduler
 from settings import TrainingSettings

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from datasets.types.outputs.base import BaseOutput
+from data.types.outputs.base import BaseOutput
 
 
 @dataclass

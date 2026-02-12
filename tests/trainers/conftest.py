@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from datasets.types.outputs.base import BaseOutput
+from data.types.outputs.base import BaseOutput
 from modules.trainable import TrainableModel
 from settings import FinetuningSettings, PreTrainingSettings, TrainingSettings
 from tracker import ExperimentTracker

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from datasets.types.outputs.finetuning import FinetuningOutput
+from data.types.outputs.finetuning import FinetuningOutput
 from modules.bert.backbone import BertBackbone
 from modules.bert.heads.cls import SequenceClassificationHead
 from modules.trainable import TrainableModel

@@ -4,9 +4,9 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from datasets.base import BaseDataset
-from datasets.types.inputs.base import BaseData
-from datasets.types.outputs.base import BaseOutput
+from data.base import BaseDataset
+from data.types.inputs.base import BaseData
+from data.types.outputs.base import BaseOutput
 from settings import LoaderSettings
 from token_encoders.bpe import BPETokenizer
 

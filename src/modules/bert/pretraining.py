@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from datasets.types.outputs.pretraining import PretrainingOutput
+from data.types.outputs.pretraining import PretrainingOutput
 from modules.bert.backbone import BertBackbone
 from modules.bert.heads.mlm import MaskedLanguageModellingHead
 from modules.bert.heads.nsp import NextSentencePredictionHead

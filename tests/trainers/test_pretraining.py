@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from datasets.types.outputs.base import BaseOutput
+from data.types.outputs.base import BaseOutput
 from modules.trainable import TrainableModel
 from settings import PreTrainingSettings
 from trainers.pretraining import PreTrainer
