@@ -86,4 +86,49 @@ Ensure you have the Rust toolchain installed, and the Python package and project
 uv venv --python 3.13
 source .venv/bin/activate
 make install
+
+# add src and rust to your python path
+export PYTHONPATH=$(PWD)/src:$(PWD)/rust
 ```
+
+You can refer to the notes to see how to train a tokenizer, bert model or use any of the modules.\
+Below is a snippet on how to pretrain a BERT model with all default settings:
+
+```python
+from pathlib import Path
+
+from data.pretraining import PretrainingCorpusData, PretrainingDataset
+from modules.bert.pretraining import BertForPreTraining
+from settings import SETTINGS
+from token_encoders.rust.bpe import RustBPETokenizer
+from tracker import ExperimentTracker
+from trainers.pretraining import PreTrainer
+
+# train a tokenizer
+tokenizer = RustBPETokenizer(SETTINGS.tokenizer)
+tokenizer.train([Path("data/wikitext-103-raw-v1/tokenizer.txt").read_text()])
+tokenizer.save(Path("saved_tokenizers/bpe"))
+
+# load corpus data and prepare pretraining dataset
+corpus_data = PretrainingCorpusData.from_file(
+    Path("data/wikitext-103-raw-v1/pretraining_bert.txt")
+)
+dataset = PretrainingDataset(
+    data=corpus_data, tokenizer=tokenizer, loader_settings=SETTINGS.loader
+)
+
+# define BERT model
+model = BertForPreTraining(SETTINGS.bert)
+
+# define trainer and start training
+trainer = PreTrainer(
+    model=model,
+    train_loader=dataset.loader(),
+    settings=SETTINGS.pretrainer,
+    tracker=ExperimentTracker(SETTINGS.tracker, [SETTINGS.bert, SETTINGS.tokenizer]),
+)
+trainer.train()
+
+```
+
+
