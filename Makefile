@@ -2,7 +2,6 @@ export PYTHONPATH=$(PWD)/src:$(PWD)/rust
 
 all: lint test
 
-
 clean:
 	rm -f .coverage
 	rm -rf .mypy_cache
