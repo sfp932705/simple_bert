@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -5,7 +6,7 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from settings import TrackerSettings
+from settings import BertSettings, LoaderSettings, TrackerSettings, TrainingSettings
 from tracker import ExperimentTracker
 
 
@@ -16,7 +17,9 @@ def tracker_settings(tmp_path: Path) -> TrackerSettings:
 
 @pytest.fixture
 def tracker(tracker_settings: TrackerSettings) -> ExperimentTracker:
-    return ExperimentTracker(tracker_settings)
+    return ExperimentTracker(
+        tracker_settings, [BertSettings(), LoaderSettings(), TrainingSettings()]
+    )
 
 
 def test_directory_structure_creation(tracker: ExperimentTracker):
@@ -58,11 +61,24 @@ def test_progress_bar_logic_does_not_crash(tracker: ExperimentTracker):
 
 
 def test_multiple_runs_create_unique_folders(tracker_settings: TrackerSettings):
-    t1 = ExperimentTracker(tracker_settings)
+    t1 = ExperimentTracker(tracker_settings, [])
     path1 = t1.run_dir
     time.sleep(1.1)
-    t2 = ExperimentTracker(tracker_settings)
+    t2 = ExperimentTracker(tracker_settings, [])
     path2 = t2.run_dir
     assert path1 != path2
     assert path1.exists()
     assert path2.exists()
+
+
+def test_settings_saved_to_file(tracker: ExperimentTracker):
+    settings_path = tracker.run_dir / "settings.json"
+    assert settings_path.exists()
+    with settings_path.open("r", encoding="utf-8") as f:
+        settings_data = json.load(f)
+    for s in [BertSettings(), LoaderSettings(), TrainingSettings()]:
+        class_name = s.__class__.__name__
+        assert class_name in settings_data, f"{class_name} missing in settings.json"
+        expected = s.model_dump()
+        actual = settings_data[class_name]
+        assert actual == expected, f"Settings for {class_name} do not match."
