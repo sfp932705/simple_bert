@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from datasets.finetuning import FinetuningDataset
-from datasets.types.inputs.finetuning import FinetuningData
+from data.finetuning import FinetuningDataset
+from data.types.inputs.finetuning import FinetuningData
 from settings import LoaderSettings
 from token_encoders.bpe import BPETokenizer
 

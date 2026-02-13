@@ -1,13 +1,15 @@
 import torch
 from torch import nn
 
+from data.types.outputs.pretraining import PretrainingOutput
 from modules.bert.backbone import BertBackbone
 from modules.bert.heads.mlm import MaskedLanguageModellingHead
 from modules.bert.heads.nsp import NextSentencePredictionHead
+from modules.trainable import TrainableModel
 from settings import BertSettings
 
 
-class BertForPreTraining(nn.Module):
+class BertForPreTraining(TrainableModel):
     def __init__(self, settings: BertSettings):
         super().__init__()
         self.bert = BertBackbone(settings)
@@ -45,3 +47,16 @@ class BertForPreTraining(nn.Module):
             seq_relationship_score.view(-1, 2), nsp_labels.view(-1)
         )
         return masked_lm_loss + next_sentence_loss
+
+    def compute_loss_from_dataset_batch(self, batch: PretrainingOutput) -> torch.Tensor:
+        prediction_scores, seq_relationship_score = self.forward(
+            input_ids=batch.input_ids,
+            attention_mask=batch.attention_mask,
+            token_type_ids=batch.token_type_ids,
+        )
+        return self.compute_loss(
+            prediction_scores,
+            seq_relationship_score,
+            batch.mlm_labels,
+            batch.nsp_labels,
+        )

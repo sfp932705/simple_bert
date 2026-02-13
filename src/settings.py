@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import torch
 from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -46,10 +49,37 @@ class LoaderSettings(BaseSettings):
     max_seq_len: int = 512
 
 
+class TrainingSettings(BaseSettings):
+    learning_rate: float = 1e-5
+    weight_decay: float = 0.01
+    adam_epsilon: float = 1e-6
+    warmup_steps: int = 10000
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+class PreTrainingSettings(TrainingSettings):
+    total_steps: int = 1000000
+    save_interval_steps: int = 10000
+    log_interval_steps: int = 100
+
+
+class FinetuningSettings(TrainingSettings):
+    num_train_epochs: int = 40
+    save_interval_epochs: int = 5
+
+
+class TrackerSettings(BaseSettings):
+    run_name: str = "exp"
+    runs_dir: Path = Path("runs")
+
+
 class Settings(BaseSettings):
     bert: BertSettings = Field(default_factory=BertSettings)
     tokenizer: TokenizerSettings = Field(default_factory=TokenizerSettings)
     loader: LoaderSettings = Field(default_factory=LoaderSettings)
+    pretrainer: PreTrainingSettings = Field(default_factory=PreTrainingSettings)
+    finetuner: FinetuningSettings = Field(default_factory=FinetuningSettings)
+    tracker: TrackerSettings = Field(default_factory=TrackerSettings)
     model_config = SettingsConfigDict(
         env_file=".env",
         env_nested_delimiter="__",

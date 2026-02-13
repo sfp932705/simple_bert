@@ -133,4 +133,51 @@ impl BaseTokenizer {
             self.inverse_vocab.insert(idx, token);
         }
     }
+
+    pub fn split_by_special_tokens<'a>(&self, text: &'a str) -> Vec<(bool, &'a str)> {
+        let mut tokens: Vec<(bool, &'a str)> = Vec::new();
+        let mut cursor = 0;
+
+        let mut special_tokens: Vec<&String> = self
+            .special_tokens
+            .iter()
+            .filter(|t| self.vocab.contains_key(*t))
+            .collect();
+        special_tokens.sort_by(|a, b| b.len().cmp(&a.len()));
+
+        while cursor < text.len() {
+            let remainder = &text[cursor..];
+            let mut matched_special: Option<&String> = None;
+
+            for special in &special_tokens {
+                if remainder.starts_with(special.as_str()) {
+                    matched_special = Some(special);
+                    break;
+                }
+            }
+
+            if let Some(special) = matched_special {
+                tokens.push((true, &text[cursor..cursor + special.len()]));
+                cursor += special.len();
+            } else {
+                let mut next_special_idx = text.len();
+                for special in &special_tokens {
+                    if let Some(pos) = remainder.find(special.as_str()) {
+                        if cursor + pos < next_special_idx {
+                            next_special_idx = cursor + pos;
+                        }
+                    }
+                }
+
+                if next_special_idx > cursor {
+                    tokens.push((false, &text[cursor..next_special_idx]));
+                    cursor = next_special_idx;
+                } else if cursor < text.len() {
+                    tokens.push((false, &text[cursor..cursor + 1]));
+                    cursor += 1;
+                }
+            }
+        }
+        tokens
+    }
 }

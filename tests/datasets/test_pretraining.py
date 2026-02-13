@@ -3,8 +3,8 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from datasets.pretraining import NSPLabel, PretrainingDataset
-from datasets.types.inputs.pretraining import PretrainingCorpusData
+from data.pretraining import NSPLabel, PretrainingDataset
+from data.types.inputs.pretraining import PretrainingCorpusData
 from settings import LoaderSettings
 from token_encoders.bpe import BPETokenizer
 

@@ -2,7 +2,6 @@ export PYTHONPATH=$(PWD)/src:$(PWD)/rust
 
 all: lint test
 
-
 clean:
 	rm -f .coverage
 	rm -rf .mypy_cache
@@ -14,6 +13,7 @@ format:
 
 install:
 	uv pip install .
+	maturin develop --release
 
 install-test: install
 	uv pip install .[test]

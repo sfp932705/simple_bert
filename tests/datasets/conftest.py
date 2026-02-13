@@ -8,7 +8,7 @@ from token_encoders.bpe import BPETokenizer
 def settings() -> LoaderSettings:
     return LoaderSettings(
         max_seq_len=12,
-        batch_size=2,
+        batch_size=4,
         shuffle=False,
         num_workers=0,
         pin_memory=False,

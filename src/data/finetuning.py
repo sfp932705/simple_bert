@@ -1,32 +1,36 @@
 import torch
 
-from datasets.base import BaseDataset, T_Tokenizer
-from datasets.types.inputs.inference import InferenceData
-from datasets.types.outputs.inference import InferenceOutput
+from data.types.inputs.finetuning import FinetuningData
+from data.types.outputs.finetuning import FinetuningOutput
 from settings import LoaderSettings
 
+from .base import BaseDataset, T_Tokenizer
 
-class InferenceDataset(BaseDataset[T_Tokenizer, InferenceData, InferenceOutput]):
+
+class FinetuningDataset(BaseDataset[T_Tokenizer, FinetuningData, FinetuningOutput]):
     def __init__(
         self,
-        data: InferenceData,
+        data: FinetuningData,
         tokenizer: T_Tokenizer,
         loader_settings: LoaderSettings | None = None,
     ):
         super().__init__(data, tokenizer, loader_settings)
 
-    def __getitem__(self, index) -> InferenceOutput:
-        text = self.data[index]
-        tokens = self.tokenizer.encode(text)
+    def __getitem__(self, index) -> FinetuningOutput:
+        sample = self.data[index]
+        tokens = self.tokenizer.encode(sample.text)
         input_ids = (
             [self.tokenizer.cls_token_id] + tokens + [self.tokenizer.sep_token_id]
         )
+
         input_ids_tensor, mask_tensor = self.pad_and_tensorize(
             input_ids, padding_value=self.tokenizer.pad_token_id
         )
+
         token_type_ids = torch.zeros_like(input_ids_tensor)
-        return InferenceOutput(
+        return FinetuningOutput(
             input_ids=input_ids_tensor,
             attention_mask=mask_tensor,
             token_type_ids=token_type_ids,
+            labels=torch.tensor(sample.label, dtype=torch.long),
         )

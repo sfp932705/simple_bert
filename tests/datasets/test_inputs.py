@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from datasets.types.inputs.finetuning import FinetuningData
-from datasets.types.inputs.inference import InferenceData
-from datasets.types.inputs.pretraining import PretrainingCorpusData
+from data.types.inputs.finetuning import FinetuningData
+from data.types.inputs.inference import InferenceData
+from data.types.inputs.pretraining import PretrainingCorpusData
 
 
 def test_finetuning_input_data():
@@ -30,10 +30,10 @@ def test_inference_input_data(tmp_path: Path):
 
 def test_pretraining_input_data(tmp_path: Path):
     f = tmp_path / "wiki.txt"
-    content = "Doc1 Sent1.|||Doc1 Sent2.\nDoc2 Sent1."
+    content = "Doc1 Sent1.Doc1 Sent2.\nDoc1 Sent3.|||Doc2 Sent1. Doc2 Sent2."
     f.write_text(content, encoding="utf-8")
-    data = PretrainingCorpusData.from_file(str(f))
+    data = PretrainingCorpusData.from_file(f, doc_separator="|||")
     assert len(data) == 2
     assert len(data[0]) == 2
+    assert len(data[1]) == 1
     assert len([d for d in data]) == 2
-

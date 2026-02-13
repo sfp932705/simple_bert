@@ -3,9 +3,9 @@ from enum import IntEnum
 
 import torch
 
-from datasets.base import BaseDataset, T_Tokenizer
-from datasets.types.inputs.pretraining import PretrainingCorpusData
-from datasets.types.outputs.pretraining import PretrainingOutput
+from data.base import BaseDataset, T_Tokenizer
+from data.types.inputs.pretraining import PretrainingCorpusData
+from data.types.outputs.pretraining import PretrainingOutput
 from settings import LoaderSettings
 
 

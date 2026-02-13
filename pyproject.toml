@@ -3,9 +3,15 @@ name = "simple_bert"
 description = "A package for training small and simple bert models"
 readme = "README.md"
 authors = [{ name = "Sergio Frayle Perez", email = "sfp932705@gmail.com" }]
-version = "0.0.8"
+version = "0.0.9"
 requires-python = ">=3.13"
-dependencies = ["numpy==2.4.1", "torch==2.9.1", "pydantic-settings==2.12.0"]
+dependencies = ["maturin==1.11.5",
+    "numpy==2.4.1",
+    "pydantic-settings==2.12.0",
+    "tensorboard==2.20.0",
+    "torch==2.9.1",
+    "tqdm==4.67.2",
+]
 
 [project.optional-dependencies]
 test = ["mypy>=1.19.1",
@@ -52,7 +58,7 @@ exclude_also = [
 
 
 [[tool.mypy.overrides]]
-module = ["rust.*"]
+module = ["rust.*", "tqdm"]
 ignore_missing_imports = true
 
 [tool.ruff]
