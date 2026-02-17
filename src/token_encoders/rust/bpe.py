@@ -3,6 +3,7 @@ from typing import Any
 
 import rust
 
+from token_encoders.base import BaseTokenizer
 from token_encoders.bpe import BPETokenizer
 from token_encoders.rust.base import RustBaseTokenizer
 
@@ -10,7 +11,7 @@ from token_encoders.rust.base import RustBaseTokenizer
 class RustBPETokenizer(RustBaseTokenizer, BPETokenizer):
     @property
     def backend_tokenizer(self) -> Any:
-        return rust.token_encoders.RustBPETokenizer  # type:ignore
+        return rust.token_encoders.RustBPETokenizer  # type: ignore
 
     @property
     def tokenizer_delimiter(self) -> str:
@@ -27,4 +28,5 @@ class RustBPETokenizer(RustBaseTokenizer, BPETokenizer):
     def load(self, directory: Path) -> None:
         BPETokenizer.load(self, directory)
         self._backend.set_state(self.vocab, self.merges)
-        self._update_special_tokens()
+        BaseTokenizer._update_special_tokens(self)
+        RustBaseTokenizer._update_special_tokens(self)
