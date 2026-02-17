@@ -3,6 +3,7 @@ from typing import Any
 
 import rust
 
+from token_encoders.base import BaseTokenizer
 from token_encoders.rust.base import RustBaseTokenizer
 from token_encoders.wp import WordPieceTokenizer
 
@@ -23,4 +24,5 @@ class RustWordPieceTokenizer(RustBaseTokenizer, WordPieceTokenizer):
     def load(self, directory: Path) -> None:
         WordPieceTokenizer.load(self, directory)
         self._backend.set_state(self.vocab, self.merges)
-        self._update_special_tokens()
+        BaseTokenizer._update_special_tokens(self)
+        RustBaseTokenizer._update_special_tokens(self)
