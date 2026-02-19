@@ -1,11 +1,18 @@
+from dataclasses import dataclass
+
 import torch
 from torch import nn
 
 from data.types.outputs.finetuning import FinetuningOutput
 from modules.bert.backbone import BertBackbone
 from modules.bert.heads.cls import SequenceClassificationHead
-from modules.trainable import TrainableModel
+from modules.trainable import TrainableModel, TrainForwardPassOutput
 from settings import BertSettings
+
+
+@dataclass
+class FinetuningForwardPassOutput(TrainForwardPassOutput):
+    logits: torch.Tensor
 
 
 class BertForSequenceClassification(TrainableModel):
@@ -30,10 +37,13 @@ class BertForSequenceClassification(TrainableModel):
         loss_fct = nn.CrossEntropyLoss()
         return loss_fct(logits.view(-1, self.num_classes), labels.view(-1))
 
-    def compute_loss_from_dataset_batch(self, batch: FinetuningOutput) -> torch.Tensor:
+    def train_forward_from_dataset_batch(
+        self, batch: FinetuningOutput
+    ) -> FinetuningForwardPassOutput:
         logits = self.forward(
             input_ids=batch.input_ids,
             attention_mask=batch.attention_mask,
             token_type_ids=batch.token_type_ids,
         )
-        return self.compute_loss(logits, batch.labels)
+        loss = self.compute_loss(logits, batch.labels)
+        return FinetuningForwardPassOutput(loss=loss, logits=logits)

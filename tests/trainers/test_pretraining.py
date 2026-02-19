@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from data.types.outputs.base import BaseOutput
+from data.base import BaseDataset
 from modules.trainable import TrainableModel
 from settings import PreTrainingSettings
 from trainers.pretraining import PreTrainer
@@ -11,12 +11,12 @@ from trainers.pretraining import PreTrainer
 @pytest.fixture
 def pretrainer(
     trainable_model: TrainableModel,
-    mock_loader: list[BaseOutput],
+    mock_dataset: BaseDataset,
     pretraining_settings: PreTrainingSettings,
     mock_tracker: MagicMock,
 ) -> PreTrainer:
     return PreTrainer(
-        pretraining_settings, trainable_model, mock_tracker, mock_loader  # type: ignore
+        pretraining_settings, trainable_model, mock_tracker, mock_dataset  # type: ignore
     )
 
 
@@ -35,7 +35,7 @@ def test_pretraining_runs_steps(
     mock_tracker.close.assert_called_once()
 
 
-def test_infinite_dataloader(pretrainer: PreTrainer, mock_loader: list[BaseOutput]):
+def test_infinite_dataloader(pretrainer: PreTrainer, mock_dataset):
     iterator = pretrainer._get_infinite_dataloader()
-    items = [next(iterator) for _ in range(5 * len(mock_loader))]
-    assert len(items) == 5 * len(mock_loader)
+    items = [next(iterator) for _ in range(5 * len(mock_dataset))]
+    assert len(items) == 5 * len(mock_dataset)

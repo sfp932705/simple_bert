@@ -1,7 +1,10 @@
 import torch
 from tqdm import tqdm
 
-from modules.bert.finetuning import BertForSequenceClassification
+from modules.bert.finetuning import (
+    BertForSequenceClassification,
+    FinetuningForwardPassOutput,
+)
 from settings import FinetuningSettings
 from trainers.base import BaseTrainer
 
@@ -32,7 +35,8 @@ class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSet
         self.model.train()
         running_loss = 0.0
         for i, batch in enumerate(self.train_loader):
-            loss_val = self._training_step(batch)
+            forward_output: FinetuningForwardPassOutput = self._training_step(batch)
+            loss_val = forward_output.loss.item()
             running_loss += loss_val
             self.tracker.update_progress(step_increment=1, postfix={"loss": loss_val})
         self.tracker.log_metric("Train/Loss", running_loss / len(self.train_loader))

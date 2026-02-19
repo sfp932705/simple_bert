@@ -5,16 +5,16 @@ from typing import Generic, TypeVar
 
 import torch
 from torch.optim import AdamW
-from torch.utils.data import DataLoader
 
-from data.base import T_DataItem
-from modules.trainable import TrainableModel
+from data.base import BaseDataset, T_DataItem
+from modules.trainable import T_FPOutput, TrainableModel
 from scheduler import BertScheduler
 from settings import TrainingSettings
 from tracker import ExperimentTracker
 
 T_Setting = TypeVar("T_Setting", bound=TrainingSettings)
 T_Model = TypeVar("T_Model", bound=TrainableModel)
+T_Dataset = TypeVar("T_Dataset", bound=BaseDataset)
 
 
 class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
@@ -23,8 +23,8 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
         settings: T_Setting,
         model: T_Model,
         tracker: ExperimentTracker,
-        train_loader: DataLoader,
-        val_loader: DataLoader | None = None,
+        train_dataset: T_Dataset,
+        val_dataset: T_Dataset | None = None,
         optimizer: torch.optim.Optimizer | None = None,
         scheduler: BertScheduler | None = None,
     ):
@@ -34,8 +34,10 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
         self.best_accuracy = float("-inf")
         self.device = torch.device(self.settings.device)
         self.model = model.to(self.device)
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+        self.train_dataset = train_dataset
+        self.train_loader = train_dataset.loader()
+        self.val_dataset = val_dataset
+        self.val_loader = val_dataset.loader() if val_dataset else None
         self.optimizer = optimizer or AdamW(
             self.model.parameters(),
             lr=self.settings.learning_rate,
@@ -58,13 +60,13 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
     def train(self):
         pass
 
-    def _training_step(self, batch: T_DataItem) -> float:
+    def _training_step(self, batch: T_DataItem) -> T_FPOutput:  # type: ignore
         self.optimizer.zero_grad()
-        loss = self.model.compute_loss_from_dataset_batch(batch.to(self.device))
-        loss.backward()
+        output = self.model.train_forward_from_dataset_batch(batch.to(self.device))
+        output.loss.backward()
         self.optimizer.step()
         self.scheduler.step()
-        return loss.item()
+        return output
 
     def _get_base_state_dict(self, additional_keys: dict | None = None) -> dict:
         state = {

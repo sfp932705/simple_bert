@@ -111,10 +111,10 @@ tokenizer.save(Path("saved_tokenizers/bpe"))
 
 # load corpus data and prepare pretraining dataset
 corpus_data = PretrainingCorpusData.from_file(
-    Path("data/wikitext-103-raw-v1/pretraining_bert.txt")
+  Path("data/wikitext-103-raw-v1/pretraining_bert.txt")
 )
 dataset = PretrainingDataset(
-    data=corpus_data, tokenizer=tokenizer, loader_settings=SETTINGS.loader
+  data=corpus_data, tokenizer=tokenizer, loader_settings=SETTINGS.loader
 )
 
 # define BERT model
@@ -122,10 +122,10 @@ model = BertForPreTraining(SETTINGS.bert)
 
 # define trainer and start training
 trainer = PreTrainer(
-    model=model,
-    train_loader=dataset.loader(),
-    settings=SETTINGS.pretrainer,
-    tracker=ExperimentTracker(SETTINGS.tracker, [SETTINGS.bert, SETTINGS.tokenizer]),
+  model=model,
+  train_dataset=dataset.loader(),
+  settings=SETTINGS.pretrainer,
+  tracker=ExperimentTracker(SETTINGS.tracker, [SETTINGS.bert, SETTINGS.tokenizer]),
 )
 trainer.train()
 
