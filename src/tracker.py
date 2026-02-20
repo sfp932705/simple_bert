@@ -63,6 +63,10 @@ class ExperimentTracker:
         for k, v in metrics.items():
             self.log_metric(k, v, step)
 
+    def log_text(self, tag: str, text_string: str, step: int | None = None):
+        actual_step = step if step is not None else self.global_step
+        self.writer.add_text(tag, text_string, actual_step)
+
     def close(self):
         if self.progress_bar:
             self.progress_bar.close()

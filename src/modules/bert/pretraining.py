@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import torch
 from torch import nn
 
@@ -5,11 +7,19 @@ from data.types.outputs.pretraining import PretrainingOutput
 from modules.bert.backbone import BertBackbone
 from modules.bert.heads.mlm import MaskedLanguageModellingHead
 from modules.bert.heads.nsp import NextSentencePredictionHead
-from modules.trainable import TrainableModel
+from modules.trainable import TrainableModel, TrainForwardPassOutput
 from settings import BertSettings
 
 
-class BertForPreTraining(TrainableModel):
+@dataclass
+class PretrainingForwardPassOutput(TrainForwardPassOutput):
+    mlm_preds: torch.Tensor
+    nsp_preds: torch.Tensor
+
+
+class BertForPreTraining(
+    TrainableModel[PretrainingOutput, PretrainingForwardPassOutput]
+):
     def __init__(self, settings: BertSettings):
         super().__init__()
         self.bert = BertBackbone(settings)
@@ -48,15 +58,20 @@ class BertForPreTraining(TrainableModel):
         )
         return masked_lm_loss + next_sentence_loss
 
-    def compute_loss_from_dataset_batch(self, batch: PretrainingOutput) -> torch.Tensor:
+    def train_forward_from_dataset_batch(
+        self, batch: PretrainingOutput
+    ) -> PretrainingForwardPassOutput:
         prediction_scores, seq_relationship_score = self.forward(
             input_ids=batch.input_ids,
             attention_mask=batch.attention_mask,
             token_type_ids=batch.token_type_ids,
         )
-        return self.compute_loss(
+        loss = self.compute_loss(
             prediction_scores,
             seq_relationship_score,
             batch.mlm_labels,
             batch.nsp_labels,
+        )
+        return PretrainingForwardPassOutput(
+            loss=loss, mlm_preds=prediction_scores, nsp_preds=seq_relationship_score
         )

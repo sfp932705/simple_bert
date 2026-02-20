@@ -123,7 +123,7 @@ model = BertForPreTraining(SETTINGS.bert)
 # define trainer and start training
 trainer = PreTrainer(
     model=model,
-    train_loader=dataset.loader(),
+    train_dataset=dataset,
     settings=SETTINGS.pretrainer,
     tracker=ExperimentTracker(SETTINGS.tracker, [SETTINGS.bert, SETTINGS.tokenizer]),
 )

@@ -4,7 +4,10 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
+from data.base import BaseDataset
 from data.types.outputs.base import BaseOutput
+from modules.bert.finetuning import FinetuningForwardPassOutput
+from modules.bert.pretraining import PretrainingForwardPassOutput
 from modules.trainable import TrainableModel
 from settings import FinetuningSettings, PreTrainingSettings, TrainingSettings
 from tracker import ExperimentTracker
@@ -17,11 +20,20 @@ class MockedOutput(BaseOutput):
     labels: torch.Tensor
 
 
+@dataclass
+class MockedForwardPassOutput(
+    FinetuningForwardPassOutput, PretrainingForwardPassOutput
+): ...
+
+
 class MockModel(TrainableModel):
     def __init__(self) -> None:
         super().__init__()
-        self.layer = torch.nn.Linear(10, 2)
+        self.layer = torch.nn.Linear(5, 2)
         self.loss_tensor = torch.randn((1, 1))
+        self.mlm_preds = torch.randn((3, 5, 2))
+        self.nsp_preds = torch.randn((3, 5))
+        self.logits = torch.randn((3, 5, 2))
 
     def forward(
         self,
@@ -43,9 +55,50 @@ class MockModel(TrainableModel):
     def compute_loss_from_batch(self, batch: MockedOutput) -> torch.Tensor:
         return batch.input_ids.sum().float().requires_grad_(True)
 
-    def compute_loss_from_dataset_batch(self, batch: BaseOutput) -> torch.Tensor:
+    def train_forward_from_dataset_batch(
+        self, batch: BaseOutput
+    ) -> MockedForwardPassOutput:
         assert isinstance(batch, MockedOutput)
-        return self.compute_loss_from_batch(batch)
+        loss = self.compute_loss_from_batch(batch)
+        return MockedForwardPassOutput(
+            loss=loss,
+            mlm_preds=self.mlm_preds,
+            nsp_preds=self.nsp_preds,
+            logits=self.logits,
+        )
+
+
+class MockTokenizer:
+    def __init__(self):
+        # Using '_' as a mock delimiter to test the replace logic
+        self.inverse_vocab = {
+            0: "[PAD]",
+            1: "[CLS]",
+            2: "[SEP]",
+            3: "[MASK]",
+            4: "_the",
+            5: "_dog",
+            6: "_barked",
+        }
+        self.unk_token = "[UNK]"
+        self.delimiter = "_"
+
+
+@pytest.fixture
+def mock_tokenizer() -> MockTokenizer:
+    return MockTokenizer()
+
+
+class MockedDataset(BaseDataset):
+    def __init__(self, batch: MockedOutput):
+        self._batches = [batch, batch]
+        self.tokenizer = None
+
+    def loader(self) -> list[MockedOutput]:  # type: ignore
+        return self._batches
+
+    def __len__(self):
+        return len(self._batches)
 
 
 @pytest.fixture
@@ -61,18 +114,27 @@ def trainable_model() -> MockModel:
 @pytest.fixture
 def mock_batch() -> MockedOutput:
     return MockedOutput(
-        input_ids=torch.randn(4, 10),
-        attention_mask=torch.ones(4, 10),
-        token_type_ids=torch.zeros(4, 10),
-        labels=torch.zeros(4),
-        mlm_labels=torch.zeros(4, 10),
-        nsp_labels=torch.zeros(4, 10),
+        input_ids=torch.tensor([[1, 4, 3, 2, 0], [1, 5, 6, 2, 0]], dtype=torch.float),
+        attention_mask=torch.tensor(
+            [[1, 1, 1, 1, 0], [1, 1, 1, 1, 0]], dtype=torch.float
+        ),
+        token_type_ids=torch.zeros(2, 5, dtype=torch.float),
+        labels=torch.zeros(2, dtype=torch.float),
+        mlm_labels=torch.tensor(
+            [[-100, -100, 5, -100, -100], [-100, -100, -100, -100, -100]],
+            dtype=torch.float,
+        ),
+        nsp_labels=torch.tensor([0, 1], dtype=torch.float),
     )
 
 
 @pytest.fixture
-def mock_loader(mock_batch: MockedOutput) -> list[MockedOutput]:
-    return [mock_batch, mock_batch]
+def mock_dataset(
+    mock_batch: MockedOutput, mock_tokenizer: MockTokenizer
+) -> MockedDataset:
+    dataset = MockedDataset(mock_batch)
+    dataset.tokenizer = mock_tokenizer
+    return dataset
 
 
 @pytest.fixture

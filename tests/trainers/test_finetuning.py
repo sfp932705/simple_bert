@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from data.types.outputs.base import BaseOutput
+from data.base import BaseDataset
 from modules.trainable import TrainableModel
 from settings import FinetuningSettings
 from trainers.finetuning import FinetuningTrainer
@@ -13,12 +13,12 @@ from trainers.finetuning import FinetuningTrainer
 @pytest.fixture
 def finetuning_trainer(
     trainable_model: TrainableModel,
-    mock_loader: list[BaseOutput],
+    mock_dataset,
     finetuning_settings: FinetuningSettings,
     mock_tracker: MagicMock,
 ) -> FinetuningTrainer:
     return FinetuningTrainer(
-        finetuning_settings, trainable_model, mock_tracker, mock_loader  # type: ignore
+        finetuning_settings, trainable_model, mock_tracker, mock_dataset  # type: ignore
     )
 
 
@@ -38,6 +38,7 @@ def finetuning_trainer_with_validation_loader(
     finetuning_trainer: FinetuningTrainer,
 ) -> FinetuningTrainer:
     finetuning_trainer.val_loader = deepcopy(finetuning_trainer.train_loader)
+    finetuning_trainer.val_dataset = deepcopy(finetuning_trainer.train_dataset)
     return finetuning_trainer
 
 
@@ -45,12 +46,12 @@ def test_finetuning_initialization(
     finetuning_trainer: FinetuningTrainer,
     trainable_model: TrainableModel,
     finetuning_settings: FinetuningSettings,
-    mock_loader: list[BaseOutput],
+    mock_dataset: BaseDataset,
 ):
     assert finetuning_trainer.model == trainable_model
     assert finetuning_trainer.optimizer is not None
     assert finetuning_trainer.total_steps == finetuning_settings.num_train_epochs * len(
-        mock_loader
+        mock_dataset
     )
 
 
@@ -71,7 +72,7 @@ def test_finetuning_runs_epochs(
 def test_finetuning_saves_checkpoints_via_tracker(
     finetuning_trainer_with_validation_loader: FinetuningTrainer,
     trainable_model: TrainableModel,
-    mock_loader: list[BaseOutput],
+    mock_dataset,
     finetuning_settings: FinetuningSettings,
     mock_tracker: MagicMock,
 ):

@@ -3,7 +3,7 @@ name = "simple_bert"
 description = "A package for training small and simple bert models"
 readme = "README.md"
 authors = [{ name = "Sergio Frayle Perez", email = "sfp932705@gmail.com" }]
-version = "0.0.10"
+version = "0.0.11"
 requires-python = ">=3.13"
 dependencies = ["maturin==1.11.5",
     "numpy==2.4.1",
