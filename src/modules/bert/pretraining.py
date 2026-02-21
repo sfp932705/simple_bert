@@ -25,6 +25,7 @@ class BertForPreTraining(
         self.bert = BertBackbone(settings)
         self.mlm = MaskedLanguageModellingHead(settings)
         self.nsp = NextSentencePredictionHead(settings)
+        self.apply(self._init_weights)
         self.mlm.decoder.weight = self.bert.embeddings.word_embeddings.weight
 
     def forward(

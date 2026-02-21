@@ -64,6 +64,7 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
         self.optimizer.zero_grad()
         output = self.model.train_forward_from_dataset_batch(batch.to(self.device))
         output.loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
         self.optimizer.step()
         self.scheduler.step()
         return output
