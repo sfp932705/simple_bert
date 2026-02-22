@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from modules.attention.layer import MultiHeadAttention
+from modules.attention.layer import AttentionLayer
 from modules.feed_forward import FeedForwardLayer
 from settings import BertSettings
 
@@ -9,7 +9,7 @@ from settings import BertSettings
 class Encoder(nn.Module):
     def __init__(self, settings: BertSettings):
         super().__init__()
-        self.attention = MultiHeadAttention(settings)
+        self.attention = AttentionLayer(settings)
         self.feed_forward = FeedForwardLayer(settings)
 
     def forward(
