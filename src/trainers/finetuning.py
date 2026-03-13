@@ -10,9 +10,11 @@ from trainers.base import BaseTrainer
 
 
 class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSettings]):
+
     @property
     def total_steps(self) -> int:
-        return self.settings.num_train_epochs * len(self.train_loader)
+        total_batches = self.settings.num_train_epochs * len(self.train_loader)
+        return total_batches // self.settings.gradient_accumulation_steps
 
     def train(self):
         self.model.train()
@@ -35,7 +37,10 @@ class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSet
         self.model.train()
         running_loss = 0.0
         for i, batch in enumerate(self.train_loader):
-            forward_output: FinetuningForwardPassOutput = self._training_step(batch)
+            is_last = (i + 1) == len(self.train_loader)
+            forward_output: FinetuningForwardPassOutput = self._training_step(
+                batch, batch_idx=i, is_last_batch=is_last
+            )
             loss_val = forward_output.loss.item()
             running_loss += loss_val
             self.tracker.update_progress(step_increment=1, postfix={"loss": loss_val})
