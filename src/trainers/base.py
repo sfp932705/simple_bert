@@ -69,9 +69,9 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
         accumulated = (batch_idx + 1) % self.settings.gradient_accumulation_steps == 0
         if accumulated or is_last_batch:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-            self.optimizer.zero_grad()
             self.optimizer.step()
             self.scheduler.step()
+            self.optimizer.zero_grad()
         return output
 
     def _get_base_state_dict(self, additional_keys: dict | None = None) -> dict:
