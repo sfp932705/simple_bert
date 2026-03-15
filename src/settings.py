@@ -50,7 +50,7 @@ class LoaderSettings(BaseSettings):
 
 
 class TrainingSettings(BaseSettings):
-    learning_rate: float = 1e-5
+    learning_rate: float = 1e-4
     weight_decay: float = 0.01
     adam_epsilon: float = 1e-6
     warmup_steps: int = 10000
