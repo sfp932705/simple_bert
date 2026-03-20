@@ -1,7 +1,5 @@
 # Simple BERT
 
-⚠️ Status: Work in Progress
-
 A modular implementation of the BERT (Bidirectional Encoder Representations from Transformers) architecture.
 
 This repo provides a structured framework for both pretraining and finetuning BERT models with performance-focused
