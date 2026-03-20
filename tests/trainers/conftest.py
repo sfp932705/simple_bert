@@ -144,7 +144,7 @@ def training_settings() -> TrainingSettings:
 
 @pytest.fixture
 def finetuning_settings() -> FinetuningSettings:
-    return FinetuningSettings(num_train_epochs=2)
+    return FinetuningSettings(num_train_epochs=2, gradient_accumulation_steps=2)
 
 
 @pytest.fixture

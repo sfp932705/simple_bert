@@ -50,8 +50,11 @@ def test_finetuning_initialization(
 ):
     assert finetuning_trainer.model == trainable_model
     assert finetuning_trainer.optimizer is not None
-    assert finetuning_trainer.total_steps == finetuning_settings.num_train_epochs * len(
-        mock_dataset
+    assert (
+        finetuning_trainer.total_steps
+        == finetuning_settings.num_train_epochs
+        * len(mock_dataset)
+        // finetuning_settings.gradient_accumulation_steps
     )
 
 
@@ -65,7 +68,10 @@ def test_finetuning_runs_epochs(
     trainer.train()
     assert trainer.optimizer.step.call_count == trainer.total_steps  # type: ignore
     assert mock_tracker.start_progress.call_count == epochs
-    assert mock_tracker.update_progress.call_count == trainer.total_steps
+    assert (
+        mock_tracker.update_progress.call_count
+        == trainer.total_steps * finetuning_settings.gradient_accumulation_steps
+    )
     mock_tracker.close.assert_called_once()
 
 

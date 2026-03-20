@@ -50,11 +50,12 @@ class LoaderSettings(BaseSettings):
 
 
 class TrainingSettings(BaseSettings):
-    learning_rate: float = 1e-5
+    learning_rate: float = 1e-4
     weight_decay: float = 0.01
     adam_epsilon: float = 1e-6
     warmup_steps: int = 10000
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    gradient_accumulation_steps: int = 8
 
 
 class PreTrainingSettings(TrainingSettings):

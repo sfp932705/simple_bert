@@ -60,13 +60,18 @@ class BaseTrainer(ABC, Generic[T_Model, T_Setting]):
     def train(self):
         pass
 
-    def _training_step(self, batch: T_DataItem) -> T_FPOutput:  # type: ignore
-        self.optimizer.zero_grad()
+    def _training_step(
+        self, batch: T_DataItem, batch_idx: int, is_last_batch: bool = False
+    ) -> T_FPOutput:  # type: ignore
         output = self.model.train_forward_from_dataset_batch(batch.to(self.device))
-        output.loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-        self.optimizer.step()
-        self.scheduler.step()
+        scaled_loss = output.loss / self.settings.gradient_accumulation_steps
+        scaled_loss.backward()
+        accumulated = (batch_idx + 1) % self.settings.gradient_accumulation_steps == 0
+        if accumulated or is_last_batch:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+            self.optimizer.step()
+            self.scheduler.step()
+            self.optimizer.zero_grad()
         return output
 
     def _get_base_state_dict(self, additional_keys: dict | None = None) -> dict:

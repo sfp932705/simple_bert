@@ -21,26 +21,49 @@ class PreTrainer(BaseTrainer[BertForPreTraining, PreTrainingSettings]):
     def train(self):
         self.model.train()
         train_iterator = self._get_infinite_dataloader()
+        accumulation_steps = self.settings.gradient_accumulation_steps
+        total_batches_to_process = self.total_steps * accumulation_steps
         self.tracker.start_progress(self.total_steps, desc="Pretraining")
         running_loss = 0.0
-        for step in range(self.total_steps):
+        batches_since_last_log = 0
+        global_step = 0
+        self.optimizer.zero_grad()
+        for batch_idx in range(total_batches_to_process):
             batch = next(train_iterator)
-            forward_output: PretrainingForwardPassOutput = self._training_step(batch)
+            forward_output: PretrainingForwardPassOutput = self._training_step(
+                batch, batch_idx=batch_idx
+            )
             loss_val = forward_output.loss.item()
             running_loss += loss_val
-            current_lr = self.scheduler.get_last_lr()[0]
-            self.tracker.update_progress(
-                step_increment=1, postfix={"loss": loss_val, "lr": current_lr}
-            )
-            if (step + 1) % self.settings.log_interval_steps == 0:
-                avg_loss = running_loss / self.settings.log_interval_steps
-                self.tracker.log_metric("Pretraining/Loss", avg_loss, step=step)
-                self.tracker.log_metric("Pretraining/LR", current_lr, step=step)
-                running_loss = 0.0
-                self._log_predictions(batch, forward_output, step)
-            last_step = (step + 1) == self.total_steps
-            if (step + 1) % self.settings.save_interval_steps == 0 or last_step:
-                self._handle_checkpoint(step, loss_val)
+            batches_since_last_log += 1
+
+            is_opt_step = (batch_idx + 1) % accumulation_steps == 0
+            is_last_batch = (batch_idx + 1) == total_batches_to_process
+
+            if is_opt_step or is_last_batch:
+                global_step += 1
+                current_lr = self.scheduler.get_last_lr()[0]
+                self.tracker.update_progress(
+                    step_increment=1, postfix={"loss": loss_val, "lr": current_lr}
+                )
+
+                if global_step % self.settings.log_interval_steps == 0:
+                    avg_loss = running_loss / batches_since_last_log
+                    self.tracker.log_metric(
+                        "Pretraining/Loss", avg_loss, step=global_step
+                    )
+                    self.tracker.log_metric(
+                        "Pretraining/LR", current_lr, step=global_step
+                    )
+                    running_loss = 0.0
+                    batches_since_last_log = 0
+                    self._log_predictions(batch, forward_output, global_step)
+
+                if (
+                    global_step % self.settings.save_interval_steps == 0
+                    or is_last_batch
+                ):
+                    self._handle_checkpoint(global_step, loss_val)
         self.tracker.close()
 
     def _format_mlm_sequence(
