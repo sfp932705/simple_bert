@@ -10,7 +10,6 @@ from trainers.base import BaseTrainer
 
 
 class FinetuningTrainer(BaseTrainer[BertForSequenceClassification, FinetuningSettings]):
-
     @property
     def total_steps(self) -> int:
         total_batches = self.settings.num_train_epochs * len(self.train_loader)

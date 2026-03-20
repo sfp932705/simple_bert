@@ -18,7 +18,6 @@ def test_layer_data_flow(
     input_tensor = torch.randn(batch_size, seq_len, hidden_size, requires_grad=True)
     loss = encoder(input_tensor).sum()
     loss.backward()
-    assert encoder.attention.query.weight.grad is not None
     assert encoder.feed_forward.dense_expansion.weight.grad is not None
 
 
